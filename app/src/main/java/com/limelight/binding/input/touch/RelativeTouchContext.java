@@ -91,6 +91,22 @@ public class RelativeTouchContext implements TouchContext {
 
     private static final int SCROLL_SPEED_FACTOR = 5;
 
+    // === Touchpad-style acceleration curve (v4) ===
+    // TUNING KNOBS — adjust these four values to taste and rebuild:
+    // Gain applied at very slow finger speeds (precision; lower = finer control)
+    private static final float ACCEL_MIN_GAIN = 0.45f;
+    // Gain applied at fast swipes (reach; higher = cross the screen in one swipe)
+    private static final float ACCEL_MAX_GAIN = 2.2f;
+    // Finger speed (pixels/ms) at or below which MIN gain applies
+    private static final float ACCEL_SLOW_SPEED = 0.08f;
+    // Finger speed (pixels/ms) at or above which MAX gain applies
+    private static final float ACCEL_FAST_SPEED = 1.6f;
+
+    private long accelLastMoveTime = 0;
+    private float accelSmoothedSpeed = 0;
+    private float accelAccumX = 0;
+    private float accelAccumY = 0;
+
     public RelativeTouchContext(NvConnection conn, int actionIndex,
                                 int referenceWidth, int referenceHeight,
                                 View view, PreferenceConfiguration prefConfig)
@@ -160,6 +176,12 @@ public class RelativeTouchContext implements TouchContext {
             originalTouchTime = eventTime;
             cancelled = confirmedDrag = confirmedMove = confirmedScroll = false;
             distanceMoved = 0;
+
+            // Reset acceleration curve state for the new gesture
+            accelLastMoveTime = 0;
+            accelSmoothedSpeed = 0;
+            accelAccumX = 0;
+            accelAccumY = 0;
 
             if (actionIndex == 0) {
                 // Start the timer for engaging a drag
@@ -268,8 +290,7 @@ public class RelativeTouchContext implements TouchContext {
 
                 if (pointerCount == 2) {
                     if (confirmedScroll) {
-                        // Inverted for natural scrolling
-                        conn.sendMouseHighResScroll((short)(-deltaY * SCROLL_SPEED_FACTOR));
+                        conn.sendMouseHighResScroll((short)(deltaY * SCROLL_SPEED_FACTOR));
                     }
                 } else {
                     if (prefConfig.absoluteMouseMode) {
@@ -280,7 +301,34 @@ public class RelativeTouchContext implements TouchContext {
                                 (short) targetView.getHeight());
                     }
                     else {
-                        conn.sendMouseMove((short) (deltaX*prefConfig.touchPadSensitivity*0.01f), (short) (deltaY*prefConfig.touchPadYSensitity*0.01f));
+                        // Base deltas including the user's sensitivity settings (signs preserved)
+                        float baseX = deltaX * prefConfig.touchPadSensitivity * 0.01f;
+                        float baseY = deltaY * prefConfig.touchPadYSensitity * 0.01f;
+
+                        // --- Touchpad-style acceleration curve ---
+                        // Finger speed in pixels/ms, smoothed to avoid gain flutter
+                        long dt = (accelLastMoveTime == 0) ? 8 : Math.max(1, eventTime - accelLastMoveTime);
+                        accelLastMoveTime = eventTime;
+                        float dist = (float) Math.sqrt((double) deltaX * deltaX + (double) deltaY * deltaY);
+                        accelSmoothedSpeed = accelSmoothedSpeed * 0.7f + (dist / dt) * 0.3f;
+
+                        // Smoothstep between MIN and MAX gain across the speed range
+                        float t = (accelSmoothedSpeed - ACCEL_SLOW_SPEED) / (ACCEL_FAST_SPEED - ACCEL_SLOW_SPEED);
+                        if (t < 0) t = 0; else if (t > 1) t = 1;
+                        t = t * t * (3 - 2 * t);
+                        float gain = ACCEL_MIN_GAIN + (ACCEL_MAX_GAIN - ACCEL_MIN_GAIN) * t;
+
+                        // Accumulate fractional movement so slow precise motion is never lost
+                        accelAccumX += baseX * gain;
+                        accelAccumY += baseY * gain;
+                        short sendX = (short) accelAccumX;
+                        short sendY = (short) accelAccumY;
+                        accelAccumX -= sendX;
+                        accelAccumY -= sendY;
+
+                        if (sendX != 0 || sendY != 0) {
+                            conn.sendMouseMove(sendX, sendY);
+                        }
                     }
                 }
 
