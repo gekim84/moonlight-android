@@ -406,8 +406,8 @@ public class TrackpadContext implements TouchContext {
                     velocityY = currentVelocityY;
                 } else {
                     // Simple EMA for smoothing
-                    velocityX = velocityX * 0.8 + currentVelocityX * 0.2;
-                    velocityY = velocityY * 0.8 + currentVelocityY * 0.2;
+                    velocityX = velocityX * 0.5 + currentVelocityX * 0.5;
+                    velocityY = velocityY * 0.5 + currentVelocityY * 0.5;
                 }
             }
 
