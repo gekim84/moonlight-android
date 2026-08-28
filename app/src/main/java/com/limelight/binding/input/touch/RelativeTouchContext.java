@@ -107,6 +107,14 @@ public class RelativeTouchContext implements TouchContext {
     private float accelAccumX = 0;
     private float accelAccumY = 0;
 
+    // Physical trackpad button (push-click) currently held — updated from Game.java.
+    // While held, a second finger steers the pointer (click-and-drag) instead of scrolling.
+    private static volatile boolean physicalButtonHeld = false;
+
+    public static void setPhysicalButtonHeld(boolean held) {
+        physicalButtonHeld = held;
+    }
+
     public RelativeTouchContext(NvConnection conn, int actionIndex,
                                 int referenceWidth, int referenceHeight,
                                 View view, PreferenceConfiguration prefConfig)
@@ -256,7 +264,42 @@ public class RelativeTouchContext implements TouchContext {
         // Enter scrolling mode if we've already left the tap zone
         // and we have 2 fingers on screen. Leave scroll mode if
         // we no longer have 2 fingers on screen
-        confirmedScroll = (actionIndex == 0 && pointerCount == 2 && confirmedMove);
+        confirmedScroll = (actionIndex == 0 && pointerCount == 2 && confirmedMove && !physicalButtonHeld);
+    }
+
+    private void sendAcceleratedMove(int deltaX, int deltaY, long eventTime) {
+        // Base deltas including the user's sensitivity settings (signs preserved)
+        float baseX = deltaX * prefConfig.touchPadSensitivity * 0.01f;
+        float baseY = deltaY * prefConfig.touchPadYSensitity * 0.01f;
+
+        // --- Touchpad-style acceleration curve ---
+        // Finger speed in pixels/ms, smoothed to avoid gain flutter
+        long dt = (accelLastMoveTime == 0) ? 8 : Math.max(1, eventTime - accelLastMoveTime);
+        accelLastMoveTime = eventTime;
+        float dist = (float) Math.sqrt((double) deltaX * deltaX + (double) deltaY * deltaY);
+        float instSpeed = dist / dt;
+        // Rise slowly (no gain flutter) but fall fast (no lingering high gain after
+        // a flick, which would amplify tiny lift-off movements into cursor drift)
+        float alpha = (instSpeed < accelSmoothedSpeed) ? 0.65f : 0.3f;
+        accelSmoothedSpeed = accelSmoothedSpeed * (1 - alpha) + instSpeed * alpha;
+
+        // Smoothstep between MIN and MAX gain across the speed range
+        float t = (accelSmoothedSpeed - ACCEL_SLOW_SPEED) / (ACCEL_FAST_SPEED - ACCEL_SLOW_SPEED);
+        if (t < 0) t = 0; else if (t > 1) t = 1;
+        t = t * t * (3 - 2 * t);
+        float gain = ACCEL_MIN_GAIN + (ACCEL_MAX_GAIN - ACCEL_MIN_GAIN) * t;
+
+        // Accumulate fractional movement so slow precise motion is never lost
+        accelAccumX += baseX * gain;
+        accelAccumY += baseY * gain;
+        short sendX = (short) accelAccumX;
+        short sendY = (short) accelAccumY;
+        accelAccumX -= sendX;
+        accelAccumY -= sendY;
+
+        if (sendX != 0 || sendY != 0) {
+            conn.sendMouseMove(sendX, sendY);
+        }
     }
 
     @Override
@@ -288,7 +331,7 @@ public class RelativeTouchContext implements TouchContext {
                     deltaY = -deltaY;
                 }
 
-                if (pointerCount == 2) {
+                if (pointerCount == 2 && !physicalButtonHeld) {
                     if (confirmedScroll) {
                         conn.sendMouseHighResScroll((short)(deltaY * SCROLL_SPEED_FACTOR));
                     }
@@ -301,39 +344,7 @@ public class RelativeTouchContext implements TouchContext {
                                 (short) targetView.getHeight());
                     }
                     else {
-                        // Base deltas including the user's sensitivity settings (signs preserved)
-                        float baseX = deltaX * prefConfig.touchPadSensitivity * 0.01f;
-                        float baseY = deltaY * prefConfig.touchPadYSensitity * 0.01f;
-
-                        // --- Touchpad-style acceleration curve ---
-                        // Finger speed in pixels/ms, smoothed to avoid gain flutter
-                        long dt = (accelLastMoveTime == 0) ? 8 : Math.max(1, eventTime - accelLastMoveTime);
-                        accelLastMoveTime = eventTime;
-                        float dist = (float) Math.sqrt((double) deltaX * deltaX + (double) deltaY * deltaY);
-                        float instSpeed = dist / dt;
-                        // Rise slowly (no gain flutter) but fall fast (no lingering high
-                        // gain after a flick, which would amplify tiny lift-off movements
-                        // into cursor drift)
-                        float alpha = (instSpeed < accelSmoothedSpeed) ? 0.65f : 0.3f;
-                        accelSmoothedSpeed = accelSmoothedSpeed * (1 - alpha) + instSpeed * alpha;
-
-                        // Smoothstep between MIN and MAX gain across the speed range
-                        float t = (accelSmoothedSpeed - ACCEL_SLOW_SPEED) / (ACCEL_FAST_SPEED - ACCEL_SLOW_SPEED);
-                        if (t < 0) t = 0; else if (t > 1) t = 1;
-                        t = t * t * (3 - 2 * t);
-                        float gain = ACCEL_MIN_GAIN + (ACCEL_MAX_GAIN - ACCEL_MIN_GAIN) * t;
-
-                        // Accumulate fractional movement so slow precise motion is never lost
-                        accelAccumX += baseX * gain;
-                        accelAccumY += baseY * gain;
-                        short sendX = (short) accelAccumX;
-                        short sendY = (short) accelAccumY;
-                        accelAccumX -= sendX;
-                        accelAccumY -= sendY;
-
-                        if (sendX != 0 || sendY != 0) {
-                            conn.sendMouseMove(sendX, sendY);
-                        }
+                        sendAcceleratedMove(deltaX, deltaY, eventTime);
                     }
                 }
 
@@ -348,8 +359,44 @@ public class RelativeTouchContext implements TouchContext {
                 }
             }
             else {
-                lastTouchX = eventX;
-                lastTouchY = eventY;
+                if (physicalButtonHeld) {
+                    // Physical button held: this finger steers the pointer so the user
+                    // can click-and-drag with a second finger, like a real touchpad.
+                    int deltaX = eventX - lastTouchX;
+                    int deltaY = eventY - lastTouchY;
+
+                    deltaX = (int) Math.round((double) Math.abs(deltaX) * xFactor);
+                    deltaY = (int) Math.round((double) Math.abs(deltaY) * yFactor);
+
+                    if (eventX < lastTouchX) {
+                        deltaX = -deltaX;
+                    }
+                    if (eventY < lastTouchY) {
+                        deltaY = -deltaY;
+                    }
+
+                    if (prefConfig.absoluteMouseMode) {
+                        conn.sendMouseMoveAsMousePosition(
+                                (short) deltaX,
+                                (short) deltaY,
+                                (short) targetView.getWidth(),
+                                (short) targetView.getHeight());
+                    }
+                    else {
+                        sendAcceleratedMove(deltaX, deltaY, eventTime);
+                    }
+
+                    if (deltaX != 0) {
+                        lastTouchX = eventX;
+                    }
+                    if (deltaY != 0) {
+                        lastTouchY = eventY;
+                    }
+                }
+                else {
+                    lastTouchX = eventX;
+                    lastTouchY = eventY;
+                }
             }
         }
 
