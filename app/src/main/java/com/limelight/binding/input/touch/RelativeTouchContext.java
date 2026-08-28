@@ -94,13 +94,13 @@ public class RelativeTouchContext implements TouchContext {
     // === Touchpad-style acceleration curve (v4) ===
     // TUNING KNOBS — adjust these four values to taste and rebuild:
     // Gain applied at very slow finger speeds (precision; lower = finer control)
-    private static final float ACCEL_MIN_GAIN = 0.45f;
+    private static final float ACCEL_MIN_GAIN = 0.6f;
     // Gain applied at fast swipes (reach; higher = cross the screen in one swipe)
-    private static final float ACCEL_MAX_GAIN = 2.2f;
+    private static final float ACCEL_MAX_GAIN = 2.6f;
     // Finger speed (pixels/ms) at or below which MIN gain applies
-    private static final float ACCEL_SLOW_SPEED = 0.08f;
+    private static final float ACCEL_SLOW_SPEED = 0.06f;
     // Finger speed (pixels/ms) at or above which MAX gain applies
-    private static final float ACCEL_FAST_SPEED = 1.6f;
+    private static final float ACCEL_FAST_SPEED = 2.6f;
 
     private long accelLastMoveTime = 0;
     private float accelSmoothedSpeed = 0;
