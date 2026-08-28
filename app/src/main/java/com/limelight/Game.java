@@ -144,8 +144,6 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
     public static Game instance;
 
     private int lastButtonState = 0;
-    private boolean debugLastPhysHeld = false; // TEMP DEBUG
-    private long debugLastRelToast = 0; // TEMP DEBUG
 
     // Only 2 touches are supported
     private final TouchContext[] touchContextMap = new TouchContext[2];
@@ -2824,13 +2822,7 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
                 // dealing with a stylus without hover support, our position might be
                 // significantly different than before.
                 if (inputCaptureProvider.eventHasRelativeMouseAxes(event)) {
-                    { // TEMP DEBUG
-                        long now = android.os.SystemClock.uptimeMillis();
-                        if (now - debugLastRelToast > 1500) {
-                            debugLastRelToast = now;
-                            Toast.makeText(this, "DBG: REL AXES", Toast.LENGTH_SHORT).show();
-                        }
-                    }
+
                     // Send the deltas straight from the motion event
                     short deltaX = (short)inputCaptureProvider.getRelativeAxisX(event);
                     short deltaY = (short)inputCaptureProvider.getRelativeAxisY(event);
@@ -3091,12 +3083,10 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
                 // Let the relative touch pipeline know whether the physical primary
                 // button (trackpad push-click) is currently held, so a second finger
                 // can steer the pointer for click-and-drag instead of scrolling.
-                boolean physHeldNow = (buttonState & MotionEvent.BUTTON_PRIMARY) != 0;
-                if (physHeldNow != debugLastPhysHeld) {
-                    debugLastPhysHeld = physHeldNow;
-                    Toast.makeText(this, physHeldNow ? "DBG: PHYS BTN DOWN" : "DBG: PHYS BTN UP", Toast.LENGTH_SHORT).show();
-                }
-                RelativeTouchContext.setPhysicalButtonHeld(physHeldNow);
+                // Let the trackpad pipeline know whether the physical primary button
+                // (trackpad push-click) is currently held, so a second finger can
+                // steer the pointer for click-and-drag like a real touchpad.
+                TrackpadContext.setPhysicalButtonHeld((buttonState & MotionEvent.BUTTON_PRIMARY) != 0);
             }
             // This case is for fingers
             else {
