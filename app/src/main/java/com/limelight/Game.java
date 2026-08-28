@@ -144,6 +144,7 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
     public static Game instance;
 
     private int lastButtonState = 0;
+    private boolean twoFingerPhysClick = false;
 
     // Only 2 touches are supported
     private final TouchContext[] touchContextMap = new TouchContext[2];
@@ -2798,17 +2799,31 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
                         event.getPointerCount() == 2 &&
                         (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && event.getActionButton() == MotionEvent.BUTTON_PRIMARY)) {
                     if (event.getActionMasked() == MotionEvent.ACTION_BUTTON_PRESS) {
+                        // Only treat this as a two-finger right-click if the press itself
+                        // happened with two fingers down.
+                        twoFingerPhysClick = true;
                         buttonState |= MotionEvent.BUTTON_SECONDARY;
-                    }
-                    else if (event.getActionMasked() == MotionEvent.ACTION_BUTTON_RELEASE) {
-                        buttonState &= ~MotionEvent.BUTTON_SECONDARY;
-                    }
-                    // We may not pressing the primary button down from a previous event,
-                    // so be sure to clear that bit out the button state.
-                    buttonState &= ~MotionEvent.BUTTON_PRIMARY;
-                    buttonState |= (lastButtonState & MotionEvent.BUTTON_PRIMARY);
+                        // We may not pressing the primary button down from a previous event,
+                        // so be sure to clear that bit out the button state.
+                        buttonState &= ~MotionEvent.BUTTON_PRIMARY;
+                        buttonState |= (lastButtonState & MotionEvent.BUTTON_PRIMARY);
 
-                    changedButtons = buttonState ^ lastButtonState;
+                        changedButtons = buttonState ^ lastButtonState;
+                    }
+                    else if (event.getActionMasked() == MotionEvent.ACTION_BUTTON_RELEASE && twoFingerPhysClick) {
+                        buttonState &= ~MotionEvent.BUTTON_SECONDARY;
+                        buttonState &= ~MotionEvent.BUTTON_PRIMARY;
+                        buttonState |= (lastButtonState & MotionEvent.BUTTON_PRIMARY);
+
+                        changedButtons = buttonState ^ lastButtonState;
+                    }
+                    // A release with two fingers down whose press was a ONE-finger click
+                    // (e.g. push-click, then a second finger lands to steer a drag, then
+                    // the pressing finger lifts first) falls through and is processed
+                    // normally, so the primary button-up is not swallowed (drag-lock fix).
+                }
+                if (event.getActionMasked() == MotionEvent.ACTION_BUTTON_RELEASE) {
+                    twoFingerPhysClick = false;
                 }
 
                 // Ignore mouse input if we're not capturing from our input source
