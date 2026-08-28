@@ -46,6 +46,7 @@ public class RelativeTouchContext implements TouchContext {
 
             // We haven't been cancelled before the timer expired so begin dragging
             confirmedDrag = true;
+            android.widget.Toast.makeText(targetView.getContext(), "DBG: TIMER CLICK", android.widget.Toast.LENGTH_SHORT).show(); // TEMP DEBUG
             conn.sendMouseButtonDown(getMouseButtonIndex());
         }
     };
@@ -109,6 +110,8 @@ public class RelativeTouchContext implements TouchContext {
 
     // Physical trackpad button (push-click) currently held — updated from Game.java.
     // While held, a second finger steers the pointer (click-and-drag) instead of scrolling.
+    private boolean debugSteerShown = false; // TEMP DEBUG
+
     private static volatile boolean physicalButtonHeld = false;
 
     public static void setPhysicalButtonHeld(boolean held) {
@@ -185,6 +188,8 @@ public class RelativeTouchContext implements TouchContext {
             cancelled = confirmedDrag = confirmedMove = confirmedScroll = false;
             distanceMoved = 0;
 
+            debugSteerShown = false; // TEMP DEBUG
+
             // Reset acceleration curve state for the new gesture
             accelLastMoveTime = 0;
             accelSmoothedSpeed = 0;
@@ -219,6 +224,7 @@ public class RelativeTouchContext implements TouchContext {
         else if (isTap(eventTime))
         {
             // Lower the mouse button
+            android.widget.Toast.makeText(targetView.getContext(), "DBG: TAP CLICK", android.widget.Toast.LENGTH_SHORT).show(); // TEMP DEBUG
             conn.sendMouseButtonDown(buttonIndex);
 
             // Release the mouse button in 100ms to allow for apps that use polling
@@ -360,6 +366,10 @@ public class RelativeTouchContext implements TouchContext {
             }
             else {
                 if (physicalButtonHeld) {
+                    if (!debugSteerShown) { // TEMP DEBUG
+                        debugSteerShown = true;
+                        android.widget.Toast.makeText(targetView.getContext(), "DBG: STEER", android.widget.Toast.LENGTH_SHORT).show();
+                    }
                     // Physical button held: this finger steers the pointer so the user
                     // can click-and-drag with a second finger, like a real touchpad.
                     int deltaX = eventX - lastTouchX;
