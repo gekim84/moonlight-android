@@ -2875,6 +2875,15 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && event.getClassification() == MotionEvent.CLASSIFICATION_TWO_FINGER_SWIPE) {
                             if (!pointerSwiping) {
                                 pointerSwiping = true;
+                                // A two-finger swipe is a scroll, never a drag: cancel any
+                                // pending press-and-hold click, and release the drag button
+                                // if it was already engaged, so scrolling can't drag-select.
+                                synthClickPending = false;
+                                pendingDrag = false;
+                                if (isDragging) {
+                                    isDragging = false;
+                                    conn.sendMouseButtonUp(MouseButtonPacket.BUTTON_LEFT);
+                                }
                                 handleTouchInput(event, trackpadContextMap, false, prefConfig.trackpadSwapAxis, MotionEvent.ACTION_POINTER_DOWN, 1, 2);
                             }
                             return handleTouchInput(event, trackpadContextMap, false, prefConfig.trackpadSwapAxis, MotionEvent.ACTION_MOVE, 1, 2);
