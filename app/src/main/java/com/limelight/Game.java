@@ -145,6 +145,7 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
 
     private int lastButtonState = 0;
     private boolean debugLastPhysHeld = false; // TEMP DEBUG
+    private long debugLastRelToast = 0; // TEMP DEBUG
 
     // Only 2 touches are supported
     private final TouchContext[] touchContextMap = new TouchContext[2];
@@ -2823,6 +2824,13 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
                 // dealing with a stylus without hover support, our position might be
                 // significantly different than before.
                 if (inputCaptureProvider.eventHasRelativeMouseAxes(event)) {
+                    { // TEMP DEBUG
+                        long now = android.os.SystemClock.uptimeMillis();
+                        if (now - debugLastRelToast > 1500) {
+                            debugLastRelToast = now;
+                            Toast.makeText(this, "DBG: REL AXES", Toast.LENGTH_SHORT).show();
+                        }
+                    }
                     // Send the deltas straight from the motion event
                     short deltaX = (short)inputCaptureProvider.getRelativeAxisX(event);
                     short deltaY = (short)inputCaptureProvider.getRelativeAxisY(event);
