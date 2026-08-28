@@ -8,16 +8,27 @@ import com.limelight.nvstream.NvConnection;
 import com.limelight.nvstream.input.MouseButtonPacket;
 
 public class TrackpadContext implements TouchContext {
-    private static long debugLastMoveToast = 0; // TEMP DEBUG
-    private static long debugLastDownToast = 0; // TEMP DEBUG
-    private static void debugToast(String msg, boolean isMove) { // TEMP DEBUG
-        long now = android.os.SystemClock.uptimeMillis();
-        long last = isMove ? debugLastMoveToast : debugLastDownToast;
-        if (now - last > 1500 && com.limelight.Game.instance != null) {
-            if (isMove) debugLastMoveToast = now; else debugLastDownToast = now;
-            android.widget.Toast.makeText(com.limelight.Game.instance, msg, android.widget.Toast.LENGTH_SHORT).show();
-        }
+    // === Touchpad-style acceleration curve ===
+    // TUNING KNOBS — adjust these four values to taste and rebuild:
+    // Gain applied at very slow finger speeds (precision; lower = finer control)
+    private static final float ACCEL_MIN_GAIN = 0.6f;
+    // Gain applied at fast swipes (reach; higher = cross the screen in one swipe)
+    private static final float ACCEL_MAX_GAIN = 2.6f;
+    // Finger speed (pixels/ms) at or below which MIN gain applies
+    private static final float ACCEL_SLOW_SPEED = 0.06f;
+    // Finger speed (pixels/ms) at or above which MAX gain applies
+    private static final float ACCEL_FAST_SPEED = 2.6f;
+
+    private double accelSmoothedSpeed = 0;
+
+    // Physical trackpad button (push-click) currently held — updated from Game.java.
+    // While held, a second finger steers the pointer (click-and-drag) like a real touchpad.
+    private static volatile boolean physicalButtonHeld = false;
+
+    public static void setPhysicalButtonHeld(boolean held) {
+        physicalButtonHeld = held;
     }
+
 
     private double pendingDeltaX = 0;
     private double pendingDeltaY = 0;
@@ -191,7 +202,6 @@ public class TrackpadContext implements TouchContext {
 
     @Override
     public boolean touchDownEvent(int eventX, int eventY, long eventTime, boolean isNewFinger) {
-        debugToast("DBG: TPC DOWN", false); // TEMP DEBUG
         if (isFlicking) {
             isFlicking = false;
             handler.removeCallbacksAndMessages(null);
@@ -315,7 +325,6 @@ public class TrackpadContext implements TouchContext {
 
     @Override
     public boolean touchMoveEvent(int eventX, int eventY, long eventTime) {
-        debugToast("DBG: TPC MOVE", true); // TEMP DEBUG
         if (cancelled) {
             return true;
         }
@@ -335,7 +344,21 @@ public class TrackpadContext implements TouchContext {
             int absDeltaX, absDeltaY;
 
             double magnitude = Math.sqrt(rawDeltaX * rawDeltaX + rawDeltaY * rawDeltaY);
-            double precisionMultiplier = Math.cbrt(magnitude / ACCELERATION_THRESHOLD);
+            // --- Touchpad-style acceleration curve (replaces the fixed cbrt curve) ---
+            if (deltaTime > 200 || deltaTime <= 0) {
+                // New gesture or stalled finger: reset speed tracking
+                accelSmoothedSpeed = 0;
+            }
+            double instSpeed = magnitude / Math.max(1, deltaTime);
+            // Rise slowly (no gain flutter) but fall fast (no lingering high gain
+            // after a flick, which would otherwise cause cursor drift on lift-off)
+            double accelAlpha = (instSpeed < accelSmoothedSpeed) ? 0.65 : 0.3;
+            accelSmoothedSpeed = accelSmoothedSpeed * (1 - accelAlpha) + instSpeed * accelAlpha;
+
+            double accelT = (accelSmoothedSpeed - ACCEL_SLOW_SPEED) / (ACCEL_FAST_SPEED - ACCEL_SLOW_SPEED);
+            if (accelT < 0) accelT = 0; else if (accelT > 1) accelT = 1;
+            accelT = accelT * accelT * (3 - 2 * accelT);
+            double precisionMultiplier = ACCEL_MIN_GAIN + (ACCEL_MAX_GAIN - ACCEL_MIN_GAIN) * accelT;
 
             float deltaX, deltaY;
             if (swapAxis) {
@@ -394,7 +417,7 @@ public class TrackpadContext implements TouchContext {
                 }
             } else {
                 if (actionIndex == 1) {
-                    if (confirmedDrag) {
+                    if (confirmedDrag || physicalButtonHeld) {
                         if (sendDeltaX != 0 || sendDeltaY != 0) {
                             conn.sendMouseMove(sendDeltaX, sendDeltaY);
                         }
