@@ -8,14 +8,27 @@ import com.limelight.nvstream.NvConnection;
 import com.limelight.nvstream.input.MouseButtonPacket;
 
 public class TrackpadContext implements TouchContext {
+    // Cursor inertia: keep the pointer gliding after a fast flick is lifted.
+    // Set to true to restore the original glide-after-flick behavior.
+    private static final boolean ENABLE_POINTER_FLICK = false;
+
+    // === Scroll glide (kinetic scrolling) ===
+    // TUNING KNOBS:
+    // Friction applied each 10ms animation frame: closer to 1.0 = longer glide.
+    // (0.93 is the original, very subtle glide; 0.97 roughly doubles the feel.)
+    private static final double SCROLL_FLICK_FRICTION = 0.97;
+    // Minimum flick speed for a scroll glide to start (lower = triggers more easily;
+    // the original shared threshold was 0.8)
+    private static final double SCROLL_FLICK_THRESHOLD = 0.4;
+
     // === Touchpad-style acceleration curve ===
     // TUNING KNOBS — adjust these four values to taste and rebuild:
     // Gain applied at very slow finger speeds (precision; lower = finer control)
-    private static final float ACCEL_MIN_GAIN = 0.6f;
+    private static final float ACCEL_MIN_GAIN = 0.40f;
     // Gain applied at fast swipes (reach; higher = cross the screen in one swipe)
-    private static final float ACCEL_MAX_GAIN = 2.6f;
+    private static final float ACCEL_MAX_GAIN = 1.6f;
     // Finger speed (pixels/ms) at or below which MIN gain applies
-    private static final float ACCEL_SLOW_SPEED = 0.06f;
+    private static final float ACCEL_SLOW_SPEED = 0.04f;
     // Finger speed (pixels/ms) at or above which MAX gain applies
     private static final float ACCEL_FAST_SPEED = 2.6f;
 
@@ -152,8 +165,8 @@ public class TrackpadContext implements TouchContext {
                 }
             }
 
-            velocityX *= FLICK_FRICTION;
-            velocityY *= FLICK_FRICTION;
+            velocityX *= SCROLL_FLICK_FRICTION;
+            velocityY *= SCROLL_FLICK_FRICTION;
 
             if (Math.sqrt(velocityX * velocityX + velocityY * velocityY) * MOMENTUM_FRAME_INTERVAL_MS < 0.5) {
                 isFlicking = false;
@@ -309,15 +322,16 @@ public class TrackpadContext implements TouchContext {
         else if (confirmedMove) {
             // This was a move/scroll that wasn't a drag or tap. Let's see if we should flick.
             double speed = Math.sqrt(velocityX * velocityX + velocityY * velocityY);
-            if (speed > FLICK_THRESHOLD) {
-                isFlicking = true;
-                if (confirmedScroll) {
+            if (confirmedScroll) {
+                if (speed > SCROLL_FLICK_THRESHOLD) {
+                    isFlicking = true;
                     handler.post(scrollMomentumRunnable);
-                } else {
-                    // A 1-finger move can flick. A >1 finger move that wasn't a scroll shouldn't cause a mouse move flick.
-                    if (maxPointerCountInGesture == 1) {
-                        handler.post(momentumRunnable);
-                    }
+                }
+            } else if (speed > FLICK_THRESHOLD) {
+                // A 1-finger move can flick. A >1 finger move that wasn't a scroll shouldn't cause a mouse move flick.
+                if (ENABLE_POINTER_FLICK && maxPointerCountInGesture == 1) {
+                    isFlicking = true;
+                    handler.post(momentumRunnable);
                 }
             }
         }
