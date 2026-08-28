@@ -310,7 +310,12 @@ public class RelativeTouchContext implements TouchContext {
                         long dt = (accelLastMoveTime == 0) ? 8 : Math.max(1, eventTime - accelLastMoveTime);
                         accelLastMoveTime = eventTime;
                         float dist = (float) Math.sqrt((double) deltaX * deltaX + (double) deltaY * deltaY);
-                        accelSmoothedSpeed = accelSmoothedSpeed * 0.7f + (dist / dt) * 0.3f;
+                        float instSpeed = dist / dt;
+                        // Rise slowly (no gain flutter) but fall fast (no lingering high
+                        // gain after a flick, which would amplify tiny lift-off movements
+                        // into cursor drift)
+                        float alpha = (instSpeed < accelSmoothedSpeed) ? 0.65f : 0.3f;
+                        accelSmoothedSpeed = accelSmoothedSpeed * (1 - alpha) + instSpeed * alpha;
 
                         // Smoothstep between MIN and MAX gain across the speed range
                         float t = (accelSmoothedSpeed - ACCEL_SLOW_SPEED) / (ACCEL_FAST_SPEED - ACCEL_SLOW_SPEED);
