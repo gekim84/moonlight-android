@@ -2975,8 +2975,18 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
                 }
 
                 if (event.getActionMasked() == MotionEvent.ACTION_SCROLL) {
-                    // Send the vertical scroll packet
-                    conn.sendMouseHighResScroll((short)(event.getAxisValue(MotionEvent.AXIS_VSCROLL) * 120));
+                    // On some devices (e.g. Samsung cover keyboards), trackpad two-finger
+                    // scrolls arrive as generic scroll events. A scroll is never a drag:
+                    // cancel any pending press-and-hold click and release the drag button
+                    // if it was already engaged, so scrolling can't drag-select.
+                    synthClickPending = false;
+                    pendingDrag = false;
+                    if (isDragging) {
+                        isDragging = false;
+                        conn.sendMouseButtonUp(MouseButtonPacket.BUTTON_LEFT);
+                    }
+                    // Send the vertical scroll packet (inverted for natural scrolling)
+                    conn.sendMouseHighResScroll((short)(-event.getAxisValue(MotionEvent.AXIS_VSCROLL) * 120));
                     conn.sendMouseHighResHScroll((short)(event.getAxisValue(MotionEvent.AXIS_HSCROLL) * 120));
                 }
 
