@@ -111,6 +111,8 @@ public class RelativeTouchContext implements TouchContext {
     // Physical trackpad button (push-click) currently held — updated from Game.java.
     // While held, a second finger steers the pointer (click-and-drag) instead of scrolling.
     private boolean debugSteerShown = false; // TEMP DEBUG
+    private static long debugLastMoveToast = 0; // TEMP DEBUG
+    private static long debugLastDownToast = 0; // TEMP DEBUG
 
     private static volatile boolean physicalButtonHeld = false;
 
@@ -179,6 +181,13 @@ public class RelativeTouchContext implements TouchContext {
         xFactor = referenceWidth / (double)targetView.getWidth();
         yFactor = referenceHeight / (double)targetView.getHeight();
 
+        { // TEMP DEBUG
+            long now = android.os.SystemClock.uptimeMillis();
+            if (now - debugLastDownToast > 1500) {
+                debugLastDownToast = now;
+                android.widget.Toast.makeText(targetView.getContext(), "DBG: RTC DOWN", android.widget.Toast.LENGTH_SHORT).show();
+            }
+        }
         originalTouchX = lastTouchX = eventX;
         originalTouchY = lastTouchY = eventY;
 
@@ -317,6 +326,13 @@ public class RelativeTouchContext implements TouchContext {
 
         if (eventX != lastTouchX || eventY != lastTouchY)
         {
+            { // TEMP DEBUG
+                long now = android.os.SystemClock.uptimeMillis();
+                if (now - debugLastMoveToast > 1500) {
+                    debugLastMoveToast = now;
+                    android.widget.Toast.makeText(targetView.getContext(), "DBG: RTC MOVE", android.widget.Toast.LENGTH_SHORT).show();
+                }
+            }
             checkForConfirmedMove(eventX, eventY);
             checkForConfirmedScroll();
 
