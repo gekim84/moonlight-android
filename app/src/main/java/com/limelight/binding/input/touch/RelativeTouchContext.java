@@ -46,7 +46,6 @@ public class RelativeTouchContext implements TouchContext {
 
             // We haven't been cancelled before the timer expired so begin dragging
             confirmedDrag = true;
-            android.widget.Toast.makeText(targetView.getContext(), "DBG: TIMER CLICK", android.widget.Toast.LENGTH_SHORT).show(); // TEMP DEBUG
             conn.sendMouseButtonDown(getMouseButtonIndex());
         }
     };
@@ -91,34 +90,6 @@ public class RelativeTouchContext implements TouchContext {
     private static final int DRAG_TIME_THRESHOLD = 650;
 
     private static final int SCROLL_SPEED_FACTOR = 5;
-
-    // === Touchpad-style acceleration curve (v4) ===
-    // TUNING KNOBS — adjust these four values to taste and rebuild:
-    // Gain applied at very slow finger speeds (precision; lower = finer control)
-    private static final float ACCEL_MIN_GAIN = 0.6f;
-    // Gain applied at fast swipes (reach; higher = cross the screen in one swipe)
-    private static final float ACCEL_MAX_GAIN = 2.6f;
-    // Finger speed (pixels/ms) at or below which MIN gain applies
-    private static final float ACCEL_SLOW_SPEED = 0.06f;
-    // Finger speed (pixels/ms) at or above which MAX gain applies
-    private static final float ACCEL_FAST_SPEED = 2.6f;
-
-    private long accelLastMoveTime = 0;
-    private float accelSmoothedSpeed = 0;
-    private float accelAccumX = 0;
-    private float accelAccumY = 0;
-
-    // Physical trackpad button (push-click) currently held — updated from Game.java.
-    // While held, a second finger steers the pointer (click-and-drag) instead of scrolling.
-    private boolean debugSteerShown = false; // TEMP DEBUG
-    private static long debugLastMoveToast = 0; // TEMP DEBUG
-    private static long debugLastDownToast = 0; // TEMP DEBUG
-
-    private static volatile boolean physicalButtonHeld = false;
-
-    public static void setPhysicalButtonHeld(boolean held) {
-        physicalButtonHeld = held;
-    }
 
     public RelativeTouchContext(NvConnection conn, int actionIndex,
                                 int referenceWidth, int referenceHeight,
@@ -181,13 +152,6 @@ public class RelativeTouchContext implements TouchContext {
         xFactor = referenceWidth / (double)targetView.getWidth();
         yFactor = referenceHeight / (double)targetView.getHeight();
 
-        { // TEMP DEBUG
-            long now = android.os.SystemClock.uptimeMillis();
-            if (now - debugLastDownToast > 1500) {
-                debugLastDownToast = now;
-                android.widget.Toast.makeText(targetView.getContext(), "DBG: RTC DOWN", android.widget.Toast.LENGTH_SHORT).show();
-            }
-        }
         originalTouchX = lastTouchX = eventX;
         originalTouchY = lastTouchY = eventY;
 
@@ -196,14 +160,6 @@ public class RelativeTouchContext implements TouchContext {
             originalTouchTime = eventTime;
             cancelled = confirmedDrag = confirmedMove = confirmedScroll = false;
             distanceMoved = 0;
-
-            debugSteerShown = false; // TEMP DEBUG
-
-            // Reset acceleration curve state for the new gesture
-            accelLastMoveTime = 0;
-            accelSmoothedSpeed = 0;
-            accelAccumX = 0;
-            accelAccumY = 0;
 
             if (actionIndex == 0) {
                 // Start the timer for engaging a drag
@@ -233,7 +189,6 @@ public class RelativeTouchContext implements TouchContext {
         else if (isTap(eventTime))
         {
             // Lower the mouse button
-            android.widget.Toast.makeText(targetView.getContext(), "DBG: TAP CLICK", android.widget.Toast.LENGTH_SHORT).show(); // TEMP DEBUG
             conn.sendMouseButtonDown(buttonIndex);
 
             // Release the mouse button in 100ms to allow for apps that use polling
@@ -279,42 +234,7 @@ public class RelativeTouchContext implements TouchContext {
         // Enter scrolling mode if we've already left the tap zone
         // and we have 2 fingers on screen. Leave scroll mode if
         // we no longer have 2 fingers on screen
-        confirmedScroll = (actionIndex == 0 && pointerCount == 2 && confirmedMove && !physicalButtonHeld);
-    }
-
-    private void sendAcceleratedMove(int deltaX, int deltaY, long eventTime) {
-        // Base deltas including the user's sensitivity settings (signs preserved)
-        float baseX = deltaX * prefConfig.touchPadSensitivity * 0.01f;
-        float baseY = deltaY * prefConfig.touchPadYSensitity * 0.01f;
-
-        // --- Touchpad-style acceleration curve ---
-        // Finger speed in pixels/ms, smoothed to avoid gain flutter
-        long dt = (accelLastMoveTime == 0) ? 8 : Math.max(1, eventTime - accelLastMoveTime);
-        accelLastMoveTime = eventTime;
-        float dist = (float) Math.sqrt((double) deltaX * deltaX + (double) deltaY * deltaY);
-        float instSpeed = dist / dt;
-        // Rise slowly (no gain flutter) but fall fast (no lingering high gain after
-        // a flick, which would amplify tiny lift-off movements into cursor drift)
-        float alpha = (instSpeed < accelSmoothedSpeed) ? 0.65f : 0.3f;
-        accelSmoothedSpeed = accelSmoothedSpeed * (1 - alpha) + instSpeed * alpha;
-
-        // Smoothstep between MIN and MAX gain across the speed range
-        float t = (accelSmoothedSpeed - ACCEL_SLOW_SPEED) / (ACCEL_FAST_SPEED - ACCEL_SLOW_SPEED);
-        if (t < 0) t = 0; else if (t > 1) t = 1;
-        t = t * t * (3 - 2 * t);
-        float gain = ACCEL_MIN_GAIN + (ACCEL_MAX_GAIN - ACCEL_MIN_GAIN) * t;
-
-        // Accumulate fractional movement so slow precise motion is never lost
-        accelAccumX += baseX * gain;
-        accelAccumY += baseY * gain;
-        short sendX = (short) accelAccumX;
-        short sendY = (short) accelAccumY;
-        accelAccumX -= sendX;
-        accelAccumY -= sendY;
-
-        if (sendX != 0 || sendY != 0) {
-            conn.sendMouseMove(sendX, sendY);
-        }
+        confirmedScroll = (actionIndex == 0 && pointerCount == 2 && confirmedMove);
     }
 
     @Override
@@ -326,13 +246,6 @@ public class RelativeTouchContext implements TouchContext {
 
         if (eventX != lastTouchX || eventY != lastTouchY)
         {
-            { // TEMP DEBUG
-                long now = android.os.SystemClock.uptimeMillis();
-                if (now - debugLastMoveToast > 1500) {
-                    debugLastMoveToast = now;
-                    android.widget.Toast.makeText(targetView.getContext(), "DBG: RTC MOVE", android.widget.Toast.LENGTH_SHORT).show();
-                }
-            }
             checkForConfirmedMove(eventX, eventY);
             checkForConfirmedScroll();
 
@@ -353,7 +266,7 @@ public class RelativeTouchContext implements TouchContext {
                     deltaY = -deltaY;
                 }
 
-                if (pointerCount == 2 && !physicalButtonHeld) {
+                if (pointerCount == 2) {
                     if (confirmedScroll) {
                         conn.sendMouseHighResScroll((short)(deltaY * SCROLL_SPEED_FACTOR));
                     }
@@ -366,7 +279,7 @@ public class RelativeTouchContext implements TouchContext {
                                 (short) targetView.getHeight());
                     }
                     else {
-                        sendAcceleratedMove(deltaX, deltaY, eventTime);
+                        conn.sendMouseMove((short) (deltaX*prefConfig.touchPadSensitivity*0.01f), (short) (deltaY*prefConfig.touchPadYSensitity*0.01f));
                     }
                 }
 
@@ -381,48 +294,8 @@ public class RelativeTouchContext implements TouchContext {
                 }
             }
             else {
-                if (physicalButtonHeld) {
-                    if (!debugSteerShown) { // TEMP DEBUG
-                        debugSteerShown = true;
-                        android.widget.Toast.makeText(targetView.getContext(), "DBG: STEER", android.widget.Toast.LENGTH_SHORT).show();
-                    }
-                    // Physical button held: this finger steers the pointer so the user
-                    // can click-and-drag with a second finger, like a real touchpad.
-                    int deltaX = eventX - lastTouchX;
-                    int deltaY = eventY - lastTouchY;
-
-                    deltaX = (int) Math.round((double) Math.abs(deltaX) * xFactor);
-                    deltaY = (int) Math.round((double) Math.abs(deltaY) * yFactor);
-
-                    if (eventX < lastTouchX) {
-                        deltaX = -deltaX;
-                    }
-                    if (eventY < lastTouchY) {
-                        deltaY = -deltaY;
-                    }
-
-                    if (prefConfig.absoluteMouseMode) {
-                        conn.sendMouseMoveAsMousePosition(
-                                (short) deltaX,
-                                (short) deltaY,
-                                (short) targetView.getWidth(),
-                                (short) targetView.getHeight());
-                    }
-                    else {
-                        sendAcceleratedMove(deltaX, deltaY, eventTime);
-                    }
-
-                    if (deltaX != 0) {
-                        lastTouchX = eventX;
-                    }
-                    if (deltaY != 0) {
-                        lastTouchY = eventY;
-                    }
-                }
-                else {
-                    lastTouchX = eventX;
-                    lastTouchY = eventY;
-                }
+                lastTouchX = eventX;
+                lastTouchY = eventY;
             }
         }
 
