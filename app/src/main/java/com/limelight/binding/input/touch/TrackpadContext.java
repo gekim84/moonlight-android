@@ -19,7 +19,7 @@ public class TrackpadContext implements TouchContext {
     private static final double SCROLL_FLICK_FRICTION = 0.97;
     // Minimum flick speed for a scroll glide to start (lower = triggers more easily;
     // the original shared threshold was 0.8)
-    private static final double SCROLL_FLICK_THRESHOLD = 0.4;
+    private static final double SCROLL_FLICK_THRESHOLD = 0.2;
 
     // === Touchpad-style acceleration curve ===
     // TUNING KNOBS — adjust these four values to taste and rebuild:
@@ -84,7 +84,7 @@ public class TrackpadContext implements TouchContext {
     // Unit: pixels/ms.
     private static final double FLICK_THRESHOLD = 0.8;
     private static final int MOMENTUM_FRAME_INTERVAL_MS = 10;
-    private static final int FLICK_VELOCITY_DECAY_TIMEOUT_MS = 50;
+    private static final int FLICK_VELOCITY_DECAY_TIMEOUT_MS = 100;
     private static final int SCROLL_TRANSITION_TIMEOUT_MS = 200;
 
     public TrackpadContext(NvConnection conn, int actionIndex) {
