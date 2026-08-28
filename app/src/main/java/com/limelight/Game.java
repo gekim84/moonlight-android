@@ -3078,6 +3078,11 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
                 }
 
                 lastButtonState = buttonState;
+
+                // Let the relative touch pipeline know whether the physical primary
+                // button (trackpad push-click) is currently held, so a second finger
+                // can steer the pointer for click-and-drag instead of scrolling.
+                RelativeTouchContext.setPhysicalButtonHeld((buttonState & MotionEvent.BUTTON_PRIMARY) != 0);
             }
             // This case is for fingers
             else {
