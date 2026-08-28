@@ -27,5 +27,5 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: artemis-fix-v10
+          name: artemis-fix-v11
           path: app/build/outputs/apk/**/*.apk
