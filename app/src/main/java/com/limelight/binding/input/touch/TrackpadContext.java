@@ -8,6 +8,17 @@ import com.limelight.nvstream.NvConnection;
 import com.limelight.nvstream.input.MouseButtonPacket;
 
 public class TrackpadContext implements TouchContext {
+    private static long debugLastMoveToast = 0; // TEMP DEBUG
+    private static long debugLastDownToast = 0; // TEMP DEBUG
+    private static void debugToast(String msg, boolean isMove) { // TEMP DEBUG
+        long now = android.os.SystemClock.uptimeMillis();
+        long last = isMove ? debugLastMoveToast : debugLastDownToast;
+        if (now - last > 1500 && com.limelight.Game.instance != null) {
+            if (isMove) debugLastMoveToast = now; else debugLastDownToast = now;
+            android.widget.Toast.makeText(com.limelight.Game.instance, msg, android.widget.Toast.LENGTH_SHORT).show();
+        }
+    }
+
     private double pendingDeltaX = 0;
     private double pendingDeltaY = 0;
     private int lastTouchX = 0;
@@ -180,6 +191,7 @@ public class TrackpadContext implements TouchContext {
 
     @Override
     public boolean touchDownEvent(int eventX, int eventY, long eventTime, boolean isNewFinger) {
+        debugToast("DBG: TPC DOWN", false); // TEMP DEBUG
         if (isFlicking) {
             isFlicking = false;
             handler.removeCallbacksAndMessages(null);
@@ -303,6 +315,7 @@ public class TrackpadContext implements TouchContext {
 
     @Override
     public boolean touchMoveEvent(int eventX, int eventY, long eventTime) {
+        debugToast("DBG: TPC MOVE", true); // TEMP DEBUG
         if (cancelled) {
             return true;
         }
