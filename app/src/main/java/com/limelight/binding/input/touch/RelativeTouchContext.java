@@ -268,7 +268,8 @@ public class RelativeTouchContext implements TouchContext {
 
                 if (pointerCount == 2) {
                     if (confirmedScroll) {
-                        conn.sendMouseHighResScroll((short)(deltaY * SCROLL_SPEED_FACTOR));
+                        // Inverted for natural scrolling
+                        conn.sendMouseHighResScroll((short)(-deltaY * SCROLL_SPEED_FACTOR));
                     }
                 } else {
                     if (prefConfig.absoluteMouseMode) {
