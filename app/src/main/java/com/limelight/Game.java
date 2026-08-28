@@ -144,6 +144,7 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
     public static Game instance;
 
     private int lastButtonState = 0;
+    private boolean debugLastPhysHeld = false; // TEMP DEBUG
 
     // Only 2 touches are supported
     private final TouchContext[] touchContextMap = new TouchContext[2];
@@ -3082,7 +3083,12 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
                 // Let the relative touch pipeline know whether the physical primary
                 // button (trackpad push-click) is currently held, so a second finger
                 // can steer the pointer for click-and-drag instead of scrolling.
-                RelativeTouchContext.setPhysicalButtonHeld((buttonState & MotionEvent.BUTTON_PRIMARY) != 0);
+                boolean physHeldNow = (buttonState & MotionEvent.BUTTON_PRIMARY) != 0;
+                if (physHeldNow != debugLastPhysHeld) {
+                    debugLastPhysHeld = physHeldNow;
+                    Toast.makeText(this, physHeldNow ? "DBG: PHYS BTN DOWN" : "DBG: PHYS BTN UP", Toast.LENGTH_SHORT).show();
+                }
+                RelativeTouchContext.setPhysicalButtonHeld(physHeldNow);
             }
             // This case is for fingers
             else {
