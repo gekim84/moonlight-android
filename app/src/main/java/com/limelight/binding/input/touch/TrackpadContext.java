@@ -98,6 +98,10 @@ public class TrackpadContext implements TouchContext {
     private boolean confirmedScroll;
     private double distanceMoved;
     private int pointerCount;
+    // Set when the number of fingers changes. Android renumbers pointer indices at
+    // that moment, so this context's next event may belong to a different finger —
+    // computing a delta across that seam teleports the cursor. Re-anchor instead.
+    private boolean needsReanchor = false;
     private boolean clickedMiddle = false;
     private int maxPointerCountInGesture;
     private boolean isClickPending;
@@ -399,6 +403,19 @@ public class TrackpadContext implements TouchContext {
             return true;
         }
 
+        if (needsReanchor) {
+            // First event after a finger count change: adopt this position as the new
+            // origin and emit nothing, so a renumbered finger can't jump the cursor.
+            needsReanchor = false;
+            lastTouchX = eventX;
+            lastTouchY = eventY;
+            lastMoveTime = eventTime;
+            accelSmoothedSpeed = 0;
+            velocityX = 0;
+            velocityY = 0;
+            return true;
+        }
+
         if (eventX != lastTouchX || eventY != lastTouchY) {
             long deltaTime = eventTime - lastMoveTime;
 
@@ -559,6 +576,9 @@ public class TrackpadContext implements TouchContext {
             isDblClickPending = false;
         }
 
+        if (this.pointerCount != pointerCount) {
+            needsReanchor = true;
+        }
         this.pointerCount = pointerCount;
 
         if (pointerCount > maxPointerCountInGesture) {
