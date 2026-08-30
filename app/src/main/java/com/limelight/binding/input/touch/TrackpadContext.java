@@ -502,9 +502,18 @@ public class TrackpadContext implements TouchContext {
                         conn.sendMouseMove(sendDeltaX, sendDeltaY);
                     }
                 }
+            } else if (physicalButtonHeld) {
+                // While the physical button is held, EITHER finger may steer. Which
+                // finger gets index 0 vs 1 depends on touch order, and the roles can
+                // swap when a finger lifts and re-lands, so keying steering to index 1
+                // alone would silently drop movement in those cases. The pressed finger
+                // is normally stationary, so it contributes no deltas.
+                if (sendDeltaX != 0 || sendDeltaY != 0) {
+                    conn.sendMouseMove(sendDeltaX, sendDeltaY);
+                }
             } else {
                 if (actionIndex == 1) {
-                    if (confirmedDrag || physicalButtonHeld) {
+                    if (confirmedDrag) {
                         if (sendDeltaX != 0 || sendDeltaY != 0) {
                             conn.sendMouseMove(sendDeltaX, sendDeltaY);
                         }
