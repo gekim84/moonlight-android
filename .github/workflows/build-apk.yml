@@ -19,6 +19,18 @@ jobs:
           distribution: temurin
           java-version: '17'
 
+      - name: Use a fixed debug signing key
+        env:
+          DEBUG_KEYSTORE_B64: ${{ secrets.DEBUG_KEYSTORE_B64 }}
+        run: |
+          mkdir -p ~/.android
+          if [ -n "$DEBUG_KEYSTORE_B64" ]; then
+            echo "$DEBUG_KEYSTORE_B64" | base64 -d > ~/.android/debug.keystore
+            echo "Using fixed debug keystore (APK will install as an update)."
+          else
+            echo "WARNING: DEBUG_KEYSTORE_B64 secret not set; build will use a random key."
+          fi
+
       - name: Build debug APK
         run: |
           chmod +x gradlew
@@ -27,5 +39,5 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: artemis-fix-v12
+          name: diana-apk
           path: app/build/outputs/apk/**/*.apk
