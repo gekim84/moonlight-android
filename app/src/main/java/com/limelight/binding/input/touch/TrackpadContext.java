@@ -62,17 +62,6 @@ public class TrackpadContext implements TouchContext {
         }
     }
 
-    // === Touchpad-style acceleration curve ===
-    // TUNING KNOBS — adjust these four values to taste and rebuild:
-    // Gain applied at very slow finger speeds (precision; lower = finer control)
-    private static final float ACCEL_MIN_GAIN = 0.40f;
-    // Gain applied at fast swipes (reach; higher = cross the screen in one swipe)
-    private static final float ACCEL_MAX_GAIN = 1.6f;
-    // Finger speed (pixels/ms) at or below which MIN gain applies
-    private static final float ACCEL_SLOW_SPEED = 0.04f;
-    // Finger speed (pixels/ms) at or above which MAX gain applies
-    private static final float ACCEL_FAST_SPEED = 2.6f;
-
     private double accelSmoothedSpeed = 0;
 
     // Physical trackpad button (push-click) currently held — updated from Game.java.
