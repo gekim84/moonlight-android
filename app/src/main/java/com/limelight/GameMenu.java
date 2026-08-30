@@ -105,6 +105,93 @@ public class GameMenu implements Game.GameMenuCallbacks {
         }
     }
 
+    private void showTrackpadTuning() {
+        final String[] labels = {
+                "Precision gain (slow)", "Reach gain (fast)",
+                "Accel start speed", "Accel full speed",
+                "Scroll glide length", "Scroll glide sensitivity",
+                "Flick snappiness", "Flick lift-off window (ms)"
+        };
+        final int[] mins = { 10, 50, 1, 50, 80, 5, 10, 20 };
+        final int[] maxs = { 200, 400, 50, 500, 99, 200, 100, 300 };
+        final int[] vals = {
+                com.limelight.binding.input.touch.TrackpadContext.tuneMinGain,
+                com.limelight.binding.input.touch.TrackpadContext.tuneMaxGain,
+                com.limelight.binding.input.touch.TrackpadContext.tuneSlowSpeed,
+                com.limelight.binding.input.touch.TrackpadContext.tuneFastSpeed,
+                com.limelight.binding.input.touch.TrackpadContext.tuneGlideFriction,
+                com.limelight.binding.input.touch.TrackpadContext.tuneGlideThreshold,
+                com.limelight.binding.input.touch.TrackpadContext.tuneFlickSmoothing,
+                com.limelight.binding.input.touch.TrackpadContext.tuneFlickWindow
+        };
+
+        int themeResId = game.getApplicationInfo().theme;
+        Context ctx = new ContextThemeWrapper(dialogScreenContext, themeResId);
+
+        android.widget.LinearLayout root = new android.widget.LinearLayout(ctx);
+        root.setOrientation(android.widget.LinearLayout.VERTICAL);
+        int pad = (int) (16 * ctx.getResources().getDisplayMetrics().density);
+        root.setPadding(pad, pad, pad, pad);
+
+        for (int i = 0; i < labels.length; i++) {
+            final int idx = i;
+            final android.widget.TextView tv = new android.widget.TextView(ctx);
+            tv.setText(labels[idx] + ":  " + (idx == 7 ? String.valueOf(vals[idx]) : String.valueOf(vals[idx] / 100f)));
+            root.addView(tv);
+
+            android.widget.SeekBar sb = new android.widget.SeekBar(ctx);
+            sb.setMax(maxs[idx] - mins[idx]);
+            sb.setProgress(vals[idx] - mins[idx]);
+            sb.setOnSeekBarChangeListener(new android.widget.SeekBar.OnSeekBarChangeListener() {
+                @Override
+                public void onProgressChanged(android.widget.SeekBar seekBar, int progress, boolean fromUser) {
+                    vals[idx] = mins[idx] + progress;
+                    tv.setText(labels[idx] + ":  " + (idx == 7 ? String.valueOf(vals[idx]) : String.valueOf(vals[idx] / 100f)));
+                    // Apply immediately — no reconnect needed
+                    com.limelight.binding.input.touch.TrackpadContext.setTuning(
+                            vals[0], vals[1], vals[2], vals[3], vals[4], vals[5],
+                            vals[6], vals[7]);
+                }
+
+                @Override
+                public void onStartTrackingTouch(android.widget.SeekBar seekBar) { }
+
+                @Override
+                public void onStopTrackingTouch(android.widget.SeekBar seekBar) { }
+            });
+            root.addView(sb);
+        }
+
+        android.widget.ScrollView scroll = new android.widget.ScrollView(ctx);
+        scroll.addView(root);
+
+        AlertDialog.Builder builder = new AlertDialog.Builder(ctx);
+        builder.setTitle("Trackpad tuning");
+        builder.setView(scroll);
+        builder.setPositiveButton("Save", (dialog, which) -> {
+            android.content.SharedPreferences prefs =
+                    androidx.preference.PreferenceManager.getDefaultSharedPreferences(game);
+            prefs.edit()
+                    .putInt("seekbar_accel_min_gain", vals[0])
+                    .putInt("seekbar_accel_max_gain", vals[1])
+                    .putInt("seekbar_accel_slow_speed", vals[2])
+                    .putInt("seekbar_accel_fast_speed", vals[3])
+                    .putInt("seekbar_scroll_glide_friction", vals[4])
+                    .putInt("seekbar_scroll_glide_threshold", vals[5])
+                    .putInt("seekbar_flick_smoothing", vals[6])
+                    .putInt("seekbar_flick_window", vals[7])
+                    .apply();
+            hideMenu();
+        });
+        builder.setNegativeButton("Close", (dialog, which) -> hideMenu());
+        builder.setOnCancelListener(dialog -> hideMenu());
+
+        if (currentDialog != null) {
+            currentDialog.dismiss();
+        }
+        currentDialog = builder.show();
+    }
+
     private void showMenuDialog(String title, MenuOption[] options) {
         int themeResId = game.getApplicationInfo().theme;
 
@@ -316,6 +403,8 @@ public class GameMenu implements Game.GameMenuCallbacks {
 
         options.add(new MenuOption(getString(R.string.game_menu_toggle_keyboard), true,
                 game::toggleKeyboard));
+
+        options.add(new MenuOption("Trackpad tuning", true, this::showTrackpadTuning));
 
         options.add(new MenuOption(getString(game.isZoomModeEnabled() ? R.string.game_menu_disable_zoom_mode : R.string.game_menu_enable_zoom_mode), true,
                 game::toggleZoomMode));

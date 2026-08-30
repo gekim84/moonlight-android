@@ -428,6 +428,86 @@
             app:iconSpaceReserved="false"
             seekbar:min="-200"
             seekbar:step="10" />
+        <com.limelight.preferences.SeekBarPreference
+            android:defaultValue="40"
+            android:key="seekbar_accel_min_gain"
+            android:max="200"
+            android:summary="@string/summary_accel_min_gain"
+            android:text="%"
+            android:title="@string/title_accel_min_gain"
+            app:iconSpaceReserved="false"
+            seekbar:min="10"
+            seekbar:step="5" />
+        <com.limelight.preferences.SeekBarPreference
+            android:defaultValue="160"
+            android:key="seekbar_accel_max_gain"
+            android:max="400"
+            android:summary="@string/summary_accel_max_gain"
+            android:text="%"
+            android:title="@string/title_accel_max_gain"
+            app:iconSpaceReserved="false"
+            seekbar:min="50"
+            seekbar:step="10" />
+        <com.limelight.preferences.SeekBarPreference
+            android:defaultValue="4"
+            android:key="seekbar_accel_slow_speed"
+            android:max="50"
+            android:summary="@string/summary_accel_slow_speed"
+            android:text=""
+            android:title="@string/title_accel_slow_speed"
+            app:iconSpaceReserved="false"
+            seekbar:min="1"
+            seekbar:step="1" />
+        <com.limelight.preferences.SeekBarPreference
+            android:defaultValue="260"
+            android:key="seekbar_accel_fast_speed"
+            android:max="500"
+            android:summary="@string/summary_accel_fast_speed"
+            android:text=""
+            android:title="@string/title_accel_fast_speed"
+            app:iconSpaceReserved="false"
+            seekbar:min="50"
+            seekbar:step="10" />
+        <com.limelight.preferences.SeekBarPreference
+            android:defaultValue="97"
+            android:key="seekbar_scroll_glide_friction"
+            android:max="99"
+            android:summary="@string/summary_scroll_glide_friction"
+            android:text=""
+            android:title="@string/title_scroll_glide_friction"
+            app:iconSpaceReserved="false"
+            seekbar:min="80"
+            seekbar:step="1" />
+        <com.limelight.preferences.SeekBarPreference
+            android:defaultValue="20"
+            android:key="seekbar_scroll_glide_threshold"
+            android:max="200"
+            android:summary="@string/summary_scroll_glide_threshold"
+            android:text=""
+            android:title="@string/title_scroll_glide_threshold"
+            app:iconSpaceReserved="false"
+            seekbar:min="5"
+            seekbar:step="5" />
+        <com.limelight.preferences.SeekBarPreference
+            android:defaultValue="50"
+            android:key="seekbar_flick_smoothing"
+            android:max="100"
+            android:summary="@string/summary_flick_smoothing"
+            android:text=""
+            android:title="@string/title_flick_smoothing"
+            app:iconSpaceReserved="false"
+            seekbar:min="10"
+            seekbar:step="5" />
+        <com.limelight.preferences.SeekBarPreference
+            android:defaultValue="100"
+            android:key="seekbar_flick_window"
+            android:max="300"
+            android:summary="@string/summary_flick_window"
+            android:text=" ms"
+            android:title="@string/title_flick_window"
+            app:iconSpaceReserved="false"
+            seekbar:min="20"
+            seekbar:step="10" />
         <CheckBoxPreference
             android:defaultValue="false"
             android:key="checkbox_trackpad_drag_drop_vibration"

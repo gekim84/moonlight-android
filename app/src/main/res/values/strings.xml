@@ -729,4 +729,21 @@
 
     <string name="title_checkbox_full_screen">Enable Full Screen</string>
     <string name="summary_checkbox_full_screen">Hide system bars with immersive mode</string>
+
+    <string name="title_accel_min_gain">Trackpad precision gain</string>
+    <string name="summary_accel_min_gain">Pointer gain for slow, careful finger movement. Lower = finer control.</string>
+    <string name="title_accel_max_gain">Trackpad reach gain</string>
+    <string name="summary_accel_max_gain">Pointer gain for fast swipes. Higher = cross the screen in one swipe.</string>
+    <string name="title_accel_slow_speed">Acceleration start speed</string>
+    <string name="summary_accel_slow_speed">Finger speed (x0.01 px/ms) below which precision gain applies.</string>
+    <string name="title_accel_fast_speed">Acceleration full speed</string>
+    <string name="summary_accel_fast_speed">Finger speed (x0.01 px/ms) at which reach gain is reached.</string>
+    <string name="title_scroll_glide_friction">Scroll glide length</string>
+    <string name="summary_scroll_glide_friction">How long scrolling coasts after a flick. Higher = longer glide.</string>
+    <string name="title_scroll_glide_threshold">Scroll glide sensitivity</string>
+    <string name="summary_scroll_glide_threshold">Flick speed (x0.01 px/ms) needed to start a glide. Lower = triggers more easily.</string>
+    <string name="title_flick_smoothing">Flick detection snappiness</string>
+    <string name="summary_flick_smoothing">How strongly the newest movement counts toward flick speed. Higher = short flicks register.</string>
+    <string name="title_flick_window">Flick lift-off window</string>
+    <string name="summary_flick_window">How long after your last movement a lift still counts as a flick.</string>
 </resources>

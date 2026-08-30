@@ -12,14 +12,55 @@ public class TrackpadContext implements TouchContext {
     // Set to true to restore the original glide-after-flick behavior.
     private static final boolean ENABLE_POINTER_FLICK = false;
 
-    // === Scroll glide (kinetic scrolling) ===
-    // TUNING KNOBS:
-    // Friction applied each 10ms animation frame: closer to 1.0 = longer glide.
-    // (0.93 is the original, very subtle glide; 0.97 roughly doubles the feel.)
-    private static final double SCROLL_FLICK_FRICTION = 0.97;
-    // Minimum flick speed for a scroll glide to start (lower = triggers more easily;
-    // the original shared threshold was 0.8)
-    private static final double SCROLL_FLICK_THRESHOLD = 0.2;
+    // === Tunable from Settings, and live from the in-stream game menu ===
+    // Raw slider values (hundredths) so the tuning dialog can show current state.
+    public static volatile int tuneMinGain = 40;
+    public static volatile int tuneMaxGain = 160;
+    public static volatile int tuneSlowSpeed = 4;
+    public static volatile int tuneFastSpeed = 260;
+    public static volatile int tuneGlideFriction = 97;
+    public static volatile int tuneGlideThreshold = 20;
+    public static volatile int tuneFlickSmoothing = 50;
+    public static volatile int tuneFlickWindow = 100;
+
+    // Derived values actually used by the curve and the scroll glide.
+    private static volatile float ACCEL_MIN_GAIN = 0.40f;
+    private static volatile float ACCEL_MAX_GAIN = 1.6f;
+    private static volatile float ACCEL_SLOW_SPEED = 0.04f;
+    private static volatile float ACCEL_FAST_SPEED = 2.6f;
+    private static volatile double SCROLL_FLICK_FRICTION = 0.97;
+    private static volatile double SCROLL_FLICK_THRESHOLD = 0.2;
+    // How strongly each new movement sample counts toward the flick speed estimate.
+    // Higher = snappier flicks register; lower = smoother but needs longer swipes.
+    private static volatile double FLICK_SMOOTHING = 0.5;
+
+    /** Applies tuning immediately to every active trackpad context. */
+    public static void setTuning(int minGain, int maxGain, int slowSpeed, int fastSpeed,
+                                 int glideFriction, int glideThreshold,
+                                 int flickSmoothing, int flickWindow) {
+        tuneMinGain = minGain;
+        tuneMaxGain = maxGain;
+        tuneSlowSpeed = slowSpeed;
+        tuneFastSpeed = fastSpeed;
+        tuneGlideFriction = glideFriction;
+        tuneGlideThreshold = glideThreshold;
+        tuneFlickSmoothing = flickSmoothing;
+        tuneFlickWindow = flickWindow;
+
+        ACCEL_MIN_GAIN = minGain / 100f;
+        ACCEL_MAX_GAIN = maxGain / 100f;
+        ACCEL_SLOW_SPEED = slowSpeed / 100f;
+        ACCEL_FAST_SPEED = fastSpeed / 100f;
+        SCROLL_FLICK_FRICTION = glideFriction / 100.0;
+        SCROLL_FLICK_THRESHOLD = glideThreshold / 100.0;
+        FLICK_SMOOTHING = flickSmoothing / 100.0;
+        FLICK_VELOCITY_DECAY_TIMEOUT_MS = flickWindow;
+
+        // Guard against an inverted range making the curve misbehave
+        if (ACCEL_FAST_SPEED <= ACCEL_SLOW_SPEED) {
+            ACCEL_FAST_SPEED = ACCEL_SLOW_SPEED + 0.01f;
+        }
+    }
 
     // === Touchpad-style acceleration curve ===
     // TUNING KNOBS — adjust these four values to taste and rebuild:
@@ -38,8 +79,20 @@ public class TrackpadContext implements TouchContext {
     // While held, a second finger steers the pointer (click-and-drag) like a real touchpad.
     private static volatile boolean physicalButtonHeld = false;
 
+    // Timestamp (uptimeMillis) of the most recent physical button press, used to
+    // suppress the synthetic tap-click machinery for gestures where the user
+    // physically clicked — otherwise both fire and produce a double click.
+    private static volatile long lastPhysicalButtonPressTime = 0;
+
     public static void setPhysicalButtonHeld(boolean held) {
         physicalButtonHeld = held;
+        if (held) {
+            lastPhysicalButtonPressTime = android.os.SystemClock.uptimeMillis();
+        }
+    }
+
+    private boolean hadPhysicalClickThisGesture() {
+        return lastPhysicalButtonPressTime >= originalTouchTime;
     }
 
 
@@ -84,7 +137,7 @@ public class TrackpadContext implements TouchContext {
     // Unit: pixels/ms.
     private static final double FLICK_THRESHOLD = 0.8;
     private static final int MOMENTUM_FRAME_INTERVAL_MS = 10;
-    private static final int FLICK_VELOCITY_DECAY_TIMEOUT_MS = 100;
+    private static volatile int FLICK_VELOCITY_DECAY_TIMEOUT_MS = 100;
     private static final int SCROLL_TRANSITION_TIMEOUT_MS = 200;
 
     public TrackpadContext(NvConnection conn, int actionIndex) {
@@ -98,6 +151,18 @@ public class TrackpadContext implements TouchContext {
         this.swapAxis = swapAxis;
         this.sensitivityX = (float) sensitivityX / 100;
         this.sensitivityY = (float) sensitivityY / 100;
+    }
+
+    public TrackpadContext(NvConnection conn, int actionIndex,
+                           com.limelight.preferences.PreferenceConfiguration prefConfig) {
+        this(conn, actionIndex, prefConfig.trackpadSwapAxis,
+                prefConfig.trackpadSensitivityX, prefConfig.trackpadSensitivityY);
+
+        // Seed the live tuning from saved preferences.
+        setTuning(prefConfig.accelMinGain, prefConfig.accelMaxGain,
+                prefConfig.accelSlowSpeed, prefConfig.accelFastSpeed,
+                prefConfig.scrollGlideFriction, prefConfig.scrollGlideThreshold,
+                prefConfig.flickSmoothing, prefConfig.flickWindow);
     }
 
     private final Runnable scrollTransitionRunnable = new Runnable() {
@@ -238,7 +303,7 @@ public class TrackpadContext implements TouchContext {
             velocityX = 0;
             velocityY = 0;
             lastMoveTime = eventTime;
-            if (isClickPending) {
+            if (isClickPending && !(android.os.SystemClock.uptimeMillis() - lastPhysicalButtonPressTime < CLICK_RELEASE_DELAY)) {
                 isClickPending = false;
                 isDblClickPending = true;
                 confirmedDrag = true;
@@ -306,7 +371,9 @@ public class TrackpadContext implements TouchContext {
                 confirmedDrag = false;
             }
         }
-        else if (isTap(eventTime)) {
+        else if (isTap(eventTime) && !hadPhysicalClickThisGesture()) {
+            // (A physical push-click already sent its own click; sending a synthetic
+            // one too would double-click, and would arm the double-tap-drag path.)
             conn.sendMouseButtonDown(buttonIndex);
             isClickPending = true;
 
@@ -406,8 +473,8 @@ public class TrackpadContext implements TouchContext {
                     velocityY = currentVelocityY;
                 } else {
                     // Simple EMA for smoothing
-                    velocityX = velocityX * 0.5 + currentVelocityX * 0.5;
-                    velocityY = velocityY * 0.5 + currentVelocityY * 0.5;
+                    velocityX = velocityX * (1 - FLICK_SMOOTHING) + currentVelocityX * FLICK_SMOOTHING;
+                    velocityY = velocityY * (1 - FLICK_SMOOTHING) + currentVelocityY * FLICK_SMOOTHING;
                 }
             }
 

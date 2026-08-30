@@ -131,6 +131,14 @@ public class PreferenceConfiguration {
     //触控屏幕灵敏度
     private static final String SEEKBAR_TOUCH_SENSITIVITY = "seekbar_touch_sensitivity_opacity_x";
     private static final String SEEKBAR_TRACKPAD_SENSITIVITY_X = "seekbar_trackpad_sensitivity_x";
+    private static final String SEEKBAR_ACCEL_MIN_GAIN = "seekbar_accel_min_gain";
+    private static final String SEEKBAR_ACCEL_MAX_GAIN = "seekbar_accel_max_gain";
+    private static final String SEEKBAR_ACCEL_SLOW_SPEED = "seekbar_accel_slow_speed";
+    private static final String SEEKBAR_ACCEL_FAST_SPEED = "seekbar_accel_fast_speed";
+    private static final String SEEKBAR_SCROLL_GLIDE_FRICTION = "seekbar_scroll_glide_friction";
+    private static final String SEEKBAR_SCROLL_GLIDE_THRESHOLD = "seekbar_scroll_glide_threshold";
+    private static final String SEEKBAR_FLICK_SMOOTHING = "seekbar_flick_smoothing";
+    private static final String SEEKBAR_FLICK_WINDOW = "seekbar_flick_window";
     private static final String SEEKBAR_TRACKPAD_SENSITIVITY_Y = "seekbar_trackpad_sensitivity_y";
     private static final String CHECKBOX_TRACKPAD_DRAG_DROP_VIBRATION = "checkbox_trackpad_drag_drop_vibration";
     private static final String SEEKBAR_TRACKPAD_DRAG_DROP_THRESHOLD = "seekbar_trackpad_drag_drop_threshold";
@@ -201,6 +209,14 @@ public class PreferenceConfiguration {
     private static final boolean DEFAULT_HIDE_CLIPBOARD_CONTENT = true;
     private static final boolean DEFAULT_ENABLE_STICKY_MODIFIER_KEY_VIRTUAL_KEYBOARD = true;
     private static final int DEFAULT_TRACKPAD_SENSITIVITY_X = 100;
+    private static final int DEFAULT_ACCEL_MIN_GAIN = 40;
+    private static final int DEFAULT_ACCEL_MAX_GAIN = 160;
+    private static final int DEFAULT_ACCEL_SLOW_SPEED = 4;
+    private static final int DEFAULT_ACCEL_FAST_SPEED = 260;
+    private static final int DEFAULT_SCROLL_GLIDE_FRICTION = 97;
+    private static final int DEFAULT_SCROLL_GLIDE_THRESHOLD = 20;
+    private static final int DEFAULT_FLICK_SMOOTHING = 50;
+    private static final int DEFAULT_FLICK_WINDOW = 100;
     private static final int DEFAULT_TRACKPAD_SENSITIVITY_Y = 100;
     private static final boolean DEFAULT_TRACKPAD_DRAG_DROP_VIBRATION = false;
     private static final int DEFAULT_TRACKPAD_DRAG_DROP_THRESHOLD = 250;
@@ -347,6 +363,14 @@ public class PreferenceConfiguration {
     public int enableNewAnalogStickOpacity;
 
     public int trackpadSensitivityX;
+    public int accelMinGain;
+    public int accelMaxGain;
+    public int accelSlowSpeed;
+    public int accelFastSpeed;
+    public int scrollGlideFriction;
+    public int scrollGlideThreshold;
+    public int flickSmoothing;
+    public int flickWindow;
     public int trackpadSensitivityY;
     public boolean trackpadDragDropVibration;
     public int trackpadDragDropThreshold;
@@ -997,6 +1021,14 @@ private static int getFramePacingValue(Context context) {
         config.touchPadYSensitity=prefs.getInt("seekbar_touchpad_sensitivity_y_opacity",100);
 
         config.trackpadSensitivityX = prefs.getInt(SEEKBAR_TRACKPAD_SENSITIVITY_X, DEFAULT_TRACKPAD_SENSITIVITY_X);
+        config.accelMinGain = prefs.getInt(SEEKBAR_ACCEL_MIN_GAIN, DEFAULT_ACCEL_MIN_GAIN);
+        config.accelMaxGain = prefs.getInt(SEEKBAR_ACCEL_MAX_GAIN, DEFAULT_ACCEL_MAX_GAIN);
+        config.accelSlowSpeed = prefs.getInt(SEEKBAR_ACCEL_SLOW_SPEED, DEFAULT_ACCEL_SLOW_SPEED);
+        config.accelFastSpeed = prefs.getInt(SEEKBAR_ACCEL_FAST_SPEED, DEFAULT_ACCEL_FAST_SPEED);
+        config.scrollGlideFriction = prefs.getInt(SEEKBAR_SCROLL_GLIDE_FRICTION, DEFAULT_SCROLL_GLIDE_FRICTION);
+        config.scrollGlideThreshold = prefs.getInt(SEEKBAR_SCROLL_GLIDE_THRESHOLD, DEFAULT_SCROLL_GLIDE_THRESHOLD);
+        config.flickSmoothing = prefs.getInt(SEEKBAR_FLICK_SMOOTHING, DEFAULT_FLICK_SMOOTHING);
+        config.flickWindow = prefs.getInt(SEEKBAR_FLICK_WINDOW, DEFAULT_FLICK_WINDOW);
         config.trackpadSensitivityY = prefs.getInt(SEEKBAR_TRACKPAD_SENSITIVITY_Y, DEFAULT_TRACKPAD_SENSITIVITY_Y);
         config.trackpadDragDropVibration = prefs.getBoolean(CHECKBOX_TRACKPAD_DRAG_DROP_VIBRATION, DEFAULT_TRACKPAD_DRAG_DROP_VIBRATION);
         config.trackpadDragDropThreshold = prefs.getInt(SEEKBAR_TRACKPAD_DRAG_DROP_THRESHOLD, DEFAULT_TRACKPAD_DRAG_DROP_THRESHOLD);
