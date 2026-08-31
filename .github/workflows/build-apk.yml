@@ -23,18 +23,19 @@ jobs:
         env:
           DEBUG_KEYSTORE_B64: ${{ secrets.DEBUG_KEYSTORE_B64 }}
         run: |
-          mkdir -p ~/.android
           if [ -n "$DEBUG_KEYSTORE_B64" ]; then
-            echo "$DEBUG_KEYSTORE_B64" | tr -d '\n\r ' | base64 -d > ~/.android/debug.keystore
-            echo "Using fixed debug keystore from repository secret."
+            echo "$DEBUG_KEYSTORE_B64" | tr -d '\n\r ' | base64 -d > diana-debug.keystore
+            echo "Wrote diana-debug.keystore from repository secret."
           elif [ -f debug-keystore.b64 ]; then
-            tr -d '\n\r ' < debug-keystore.b64 | base64 -d > ~/.android/debug.keystore
-            echo "Using fixed debug keystore from debug-keystore.b64 file."
+            tr -d '\n\r ' < debug-keystore.b64 | base64 -d > diana-debug.keystore
+            echo "Wrote diana-debug.keystore from debug-keystore.b64 file."
           else
-            echo "WARNING: no fixed keystore found; build will use a random key."
-            exit 0
+            echo "ERROR: no fixed keystore available; refusing to build with a random key."
+            exit 1
           fi
-          keytool -list -keystore ~/.android/debug.keystore -storepass android | head -5
+          # Gradle reads this path explicitly (see app/build.gradle signingConfigs)
+          cp diana-debug.keystore ~/.android/debug.keystore 2>/dev/null || mkdir -p ~/.android && cp diana-debug.keystore ~/.android/debug.keystore
+          keytool -list -keystore diana-debug.keystore -storepass android | head -5
 
       - name: Build debug APK
         run: |

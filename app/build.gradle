@@ -93,9 +93,28 @@ android {
         }
     }
 
+    signingConfigs {
+        dianaDebug {
+            // Populated below only if diana-debug.keystore exists at the repo root.
+            // Keeping a fixed key means each build installs as an update instead of
+            // requiring an uninstall.
+            def ks = rootProject.file("diana-debug.keystore")
+            if (ks.exists()) {
+                storeFile ks
+                storePassword "android"
+                keyAlias "androiddebugkey"
+                keyPassword "android"
+            }
+        }
+    }
+
     buildTypes {
         debug {
             applicationIdSuffix ".noirdebug"
+
+            if (rootProject.file("diana-debug.keystore").exists()) {
+                signingConfig signingConfigs.dianaDebug
+            }
             resValue "string", "app_label", "Diana"
             resValue "string", "app_label_root", "Diana (Root)"
             resValue "string", "app_label_game", "Diana (Game)"
