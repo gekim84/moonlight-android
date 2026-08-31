@@ -610,7 +610,9 @@ public class TrackpadContext implements TouchContext {
                                         conn.sendKeyboardInput((short) 0xA2, KeyboardPacket.KEY_DOWN,
                                                 (byte) 0, (byte) 0);
                                     }
-                                    pinchAccum += dDist * PINCH_SCROLL_PER_PX;
+                                    // Negated: fingers spreading (positive dDist) must zoom IN,
+                                    // which on Windows is a positive Ctrl+wheel tick.
+                                    pinchAccum += -dDist * PINCH_SCROLL_PER_PX;
                                     short ticks = (short) pinchAccum;
                                     if (ticks != 0) {
                                         pinchAccum -= ticks;
