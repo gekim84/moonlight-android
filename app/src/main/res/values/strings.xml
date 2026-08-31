@@ -746,4 +746,10 @@
     <string name="summary_flick_smoothing">How strongly the newest movement counts toward flick speed. Higher = short flicks register.</string>
     <string name="title_flick_window">Flick lift-off window</string>
     <string name="summary_flick_window">How long after your last movement a lift still counts as a flick.</string>
+    <string name="title_pinch_speed">Pinch zoom speed</string>
+    <string name="summary_pinch_speed">Zoom per pinch. Set to 0 to turn pinch zoom off.</string>
+    <string name="title_pinch_dominance">Pinch vs scroll bias</string>
+    <string name="summary_pinch_dominance">Higher = fewer accidental zooms while scrolling.</string>
+    <string name="title_pinch_min_delta">Pinch jitter floor</string>
+    <string name="summary_pinch_min_delta">Minimum finger-distance change before a pinch registers.</string>
 </resources>

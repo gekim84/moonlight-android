@@ -110,10 +110,11 @@ public class GameMenu implements Game.GameMenuCallbacks {
                 "Precision gain (slow)", "Reach gain (fast)",
                 "Accel start speed", "Accel full speed",
                 "Scroll glide length", "Scroll glide sensitivity",
-                "Flick snappiness", "Flick lift-off window (ms)"
+                "Flick snappiness", "Flick lift-off window (ms)",
+                "Pinch zoom speed (0=off)", "Pinch vs scroll bias", "Pinch jitter floor"
         };
-        final int[] mins = { 10, 50, 1, 50, 80, 5, 10, 20 };
-        final int[] maxs = { 200, 400, 50, 500, 99, 200, 100, 300 };
+        final int[] mins = { 10, 50, 1, 50, 80, 5, 10, 20, 0, 50, 10 };
+        final int[] maxs = { 200, 400, 50, 500, 99, 200, 100, 300, 1000, 300, 300 };
         final int[] vals = {
                 com.limelight.binding.input.touch.TrackpadContext.tuneMinGain,
                 com.limelight.binding.input.touch.TrackpadContext.tuneMaxGain,
@@ -122,7 +123,10 @@ public class GameMenu implements Game.GameMenuCallbacks {
                 com.limelight.binding.input.touch.TrackpadContext.tuneGlideFriction,
                 com.limelight.binding.input.touch.TrackpadContext.tuneGlideThreshold,
                 com.limelight.binding.input.touch.TrackpadContext.tuneFlickSmoothing,
-                com.limelight.binding.input.touch.TrackpadContext.tuneFlickWindow
+                com.limelight.binding.input.touch.TrackpadContext.tuneFlickWindow,
+                com.limelight.binding.input.touch.TrackpadContext.tunePinchSpeed,
+                com.limelight.binding.input.touch.TrackpadContext.tunePinchDominance,
+                com.limelight.binding.input.touch.TrackpadContext.tunePinchMinDelta
         };
 
         int themeResId = game.getApplicationInfo().theme;
@@ -151,6 +155,8 @@ public class GameMenu implements Game.GameMenuCallbacks {
                     com.limelight.binding.input.touch.TrackpadContext.setTuning(
                             vals[0], vals[1], vals[2], vals[3], vals[4], vals[5],
                             vals[6], vals[7]);
+                    com.limelight.binding.input.touch.TrackpadContext.setPinchTuning(
+                            vals[8], vals[9], vals[10]);
                 }
 
                 @Override
@@ -180,6 +186,9 @@ public class GameMenu implements Game.GameMenuCallbacks {
                     .putInt("seekbar_scroll_glide_threshold", vals[5])
                     .putInt("seekbar_flick_smoothing", vals[6])
                     .putInt("seekbar_flick_window", vals[7])
+                    .putInt("seekbar_pinch_speed", vals[8])
+                    .putInt("seekbar_pinch_dominance", vals[9])
+                    .putInt("seekbar_pinch_min_delta", vals[10])
                     .apply();
             hideMenu();
         });

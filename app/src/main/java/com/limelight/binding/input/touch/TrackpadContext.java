@@ -5,6 +5,7 @@ import android.os.Looper;
 
 import com.limelight.LimeLog;
 import com.limelight.nvstream.NvConnection;
+import com.limelight.nvstream.input.KeyboardPacket;
 import com.limelight.nvstream.input.MouseButtonPacket;
 
 public class TrackpadContext implements TouchContext {
@@ -89,6 +90,14 @@ public class TrackpadContext implements TouchContext {
         }
     }
 
+    private void endPinch() {
+        if (pinchActive) {
+            pinchActive = false;
+            pinchAccum = 0;
+            conn.sendKeyboardInput((short) 0xA2, KeyboardPacket.KEY_UP, (byte) 0, (byte) 0);
+        }
+    }
+
     private boolean hadPhysicalClickThisGesture() {
         return lastPhysicalButtonPressTime >= originalTouchTime;
     }
@@ -132,6 +141,37 @@ public class TrackpadContext implements TouchContext {
     private static final int TAP_MOVEMENT_THRESHOLD = 30;
     private static final int TAP_TIME_THRESHOLD = 230;
     private static final int CLICK_RELEASE_DELAY = TAP_TIME_THRESHOLD;
+    // === Pinch to zoom ===
+    // Two fingers changing distance is sent as Ctrl + scroll wheel, which Windows
+    // apps (browsers, Explorer, Office, image viewers) interpret as zoom.
+    // Raw slider values (hundredths). Zoom speed 0 disables pinch entirely.
+    public static volatile int tunePinchSpeed = 300;
+    public static volatile int tunePinchDominance = 120;
+    public static volatile int tunePinchMinDelta = 80;
+
+    private static volatile boolean ENABLE_PINCH_ZOOM = true;
+    private static volatile double PINCH_SCROLL_PER_PX = 3.0;
+    private static volatile double PINCH_MIN_DELTA = 0.8;
+    private static volatile double PINCH_DOMINANCE = 1.2;
+
+    /** Applies pinch tuning immediately to every active trackpad context. */
+    public static void setPinchTuning(int speed, int dominance, int minDelta) {
+        tunePinchSpeed = speed;
+        tunePinchDominance = dominance;
+        tunePinchMinDelta = minDelta;
+
+        PINCH_SCROLL_PER_PX = speed / 100.0;
+        PINCH_DOMINANCE = dominance / 100.0;
+        PINCH_MIN_DELTA = minDelta / 100.0;
+        ENABLE_PINCH_ZOOM = speed > 0;
+    }
+
+    private static final int[] fingerX = new int[2];
+    private static final int[] fingerY = new int[2];
+    private static double lastPinchDist = -1;
+    private static boolean pinchActive = false;
+    private static double pinchAccum = 0;
+
     private static final int SCROLL_SPEED_FACTOR_X = 2;
     private static final int SCROLL_SPEED_FACTOR_Y = 3;
     private static final double ACCELERATION_THRESHOLD = 8.0;
@@ -165,6 +205,7 @@ public class TrackpadContext implements TouchContext {
                 prefConfig.accelSlowSpeed, prefConfig.accelFastSpeed,
                 prefConfig.scrollGlideFriction, prefConfig.scrollGlideThreshold,
                 prefConfig.flickSmoothing, prefConfig.flickWindow);
+        setPinchTuning(prefConfig.pinchSpeed, prefConfig.pinchDominance, prefConfig.pinchMinDelta);
     }
 
     private final Runnable scrollTransitionRunnable = new Runnable() {
@@ -287,6 +328,10 @@ public class TrackpadContext implements TouchContext {
             handler.removeCallbacksAndMessages(null);
         }
 
+        if (actionIndex < 2) {
+            fingerX[actionIndex] = eventX;
+            fingerY[actionIndex] = eventY;
+        }
         originalTouchX = lastTouchX = eventX;
         originalTouchY = lastTouchY = eventY;
 
@@ -328,6 +373,10 @@ public class TrackpadContext implements TouchContext {
             }
         }
 
+        if (actionIndex < 2) {
+            fingerX[actionIndex] = eventX;
+            fingerY[actionIndex] = eventY;
+        }
         originalTouchX = lastTouchX = eventX;
         originalTouchY = lastTouchY = eventY;
 
@@ -410,6 +459,11 @@ public class TrackpadContext implements TouchContext {
     public boolean touchMoveEvent(int eventX, int eventY, long eventTime) {
         if (cancelled) {
             return true;
+        }
+
+        if (actionIndex < 2) {
+            fingerX[actionIndex] = eventX;
+            fingerY[actionIndex] = eventY;
         }
 
         if (needsReanchor) {
@@ -538,7 +592,40 @@ public class TrackpadContext implements TouchContext {
                         }
                     } else if (pointerCount == 2) {
                         checkForConfirmedScroll();
-                        if (confirmedScroll) {
+
+                        boolean pinching = false;
+                        if (ENABLE_PINCH_ZOOM && confirmedScroll) {
+                            double dx = fingerX[0] - fingerX[1];
+                            double dy = fingerY[0] - fingerY[1];
+                            double dist = Math.sqrt(dx * dx + dy * dy);
+                            if (lastPinchDist >= 0) {
+                                double dDist = dist - lastPinchDist;
+                                double travel = Math.max(Math.abs(sendDeltaX), Math.abs(sendDeltaY));
+                                if (Math.abs(dDist) >= PINCH_MIN_DELTA
+                                        && Math.abs(dDist) > travel * PINCH_DOMINANCE) {
+                                    pinching = true;
+                                    if (!pinchActive) {
+                                        pinchActive = true;
+                                        pinchAccum = 0;
+                                        conn.sendKeyboardInput((short) 0xA2, KeyboardPacket.KEY_DOWN,
+                                                (byte) 0, (byte) 0);
+                                    }
+                                    pinchAccum += dDist * PINCH_SCROLL_PER_PX;
+                                    short ticks = (short) pinchAccum;
+                                    if (ticks != 0) {
+                                        pinchAccum -= ticks;
+                                        conn.sendMouseHighResScroll(ticks);
+                                    }
+                                }
+                            }
+                            lastPinchDist = dist;
+                        }
+
+                        if (!pinching && pinchActive) {
+                            endPinch();
+                        }
+
+                        if (confirmedScroll && !pinching) {
                             if (absDeltaX > absDeltaY) {
                                 conn.sendMouseHighResHScroll((short)(-sendDeltaX * SCROLL_SPEED_FACTOR_X));
                                 if (absDeltaY * 1.05 > absDeltaX) {
@@ -606,6 +693,8 @@ public class TrackpadContext implements TouchContext {
 
         if (this.pointerCount != pointerCount) {
             needsReanchor = true;
+            lastPinchDist = -1;
+            endPinch();
         }
         this.pointerCount = pointerCount;
 
