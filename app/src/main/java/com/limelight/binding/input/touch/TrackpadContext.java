@@ -73,7 +73,16 @@ public class TrackpadContext implements TouchContext {
     // physically clicked — otherwise both fire and produce a double click.
     private static volatile long lastPhysicalButtonPressTime = 0;
 
+    // While the button is held, the first finger that actually moves claims steering.
+    // The pressed finger is never perfectly still — its contact centroid drifts as
+    // pressure changes — and letting both contribute makes the pointer jump.
+    private static volatile int steeringOwner = -1;
+    private static final int STEER_CLAIM_THRESHOLD = 3;
+
     public static void setPhysicalButtonHeld(boolean held) {
+        if (!held) {
+            steeringOwner = -1;
+        }
         physicalButtonHeld = held;
         if (held) {
             lastPhysicalButtonPressTime = android.os.SystemClock.uptimeMillis();
@@ -503,6 +512,16 @@ public class TrackpadContext implements TouchContext {
                     }
                 }
             } else if (physicalButtonHeld) {
+                if (steeringOwner == -1) {
+                    if (Math.abs(sendDeltaX) >= STEER_CLAIM_THRESHOLD
+                            || Math.abs(sendDeltaY) >= STEER_CLAIM_THRESHOLD) {
+                        steeringOwner = actionIndex;
+                    }
+                }
+                if (steeringOwner != -1 && steeringOwner != actionIndex) {
+                    // Not the steering finger — ignore its drift entirely.
+                    return true;
+                }
                 // While the physical button is held, EITHER finger may steer. Which
                 // finger gets index 0 vs 1 depends on touch order, and the roles can
                 // swap when a finger lifts and re-lands, so keying steering to index 1
