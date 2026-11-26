@@ -752,4 +752,10 @@
     <string name="summary_pinch_dominance">Higher = fewer accidental zooms while scrolling.</string>
     <string name="title_pinch_min_delta">Pinch jitter floor</string>
     <string name="summary_pinch_min_delta">Minimum finger-distance change before a pinch registers.</string>
+    <string name="title_scroll_swap_axes">Scroll: swap axes</string>
+    <string name="summary_scroll_swap_axes">Turn on when sideways finger movement scrolls up and down.</string>
+    <string name="title_scroll_invert_v">Scroll: invert vertical</string>
+    <string name="summary_scroll_invert_v">Flips vertical scroll direction. Also flips pinch zoom.</string>
+    <string name="title_scroll_invert_h">Scroll: invert horizontal</string>
+    <string name="summary_scroll_invert_h">Flips horizontal scroll direction.</string>
 </resources>

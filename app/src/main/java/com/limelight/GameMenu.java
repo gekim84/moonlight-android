@@ -111,10 +111,12 @@ public class GameMenu implements Game.GameMenuCallbacks {
                 "Accel start speed", "Accel full speed",
                 "Scroll glide length", "Scroll glide sensitivity",
                 "Flick snappiness", "Flick lift-off window (ms)",
-                "Pinch zoom speed (0=off)", "Pinch vs scroll bias", "Pinch jitter floor"
+                "Pinch zoom speed (0=off)", "Pinch vs scroll bias", "Pinch jitter floor",
+                "Scroll: swap axes (0/1)", "Scroll: invert vertical (0/1)",
+                "Scroll: invert horizontal (0/1)"
         };
-        final int[] mins = { 10, 50, 1, 50, 80, 5, 10, 20, 0, 50, 10 };
-        final int[] maxs = { 200, 400, 50, 500, 99, 200, 100, 300, 1000, 300, 300 };
+        final int[] mins = { 10, 50, 1, 50, 80, 5, 10, 20, 0, 50, 10, 0, 0, 0 };
+        final int[] maxs = { 200, 400, 50, 500, 99, 200, 100, 300, 1000, 300, 300, 1, 1, 1 };
         final int[] vals = {
                 com.limelight.binding.input.touch.TrackpadContext.tuneMinGain,
                 com.limelight.binding.input.touch.TrackpadContext.tuneMaxGain,
@@ -126,7 +128,10 @@ public class GameMenu implements Game.GameMenuCallbacks {
                 com.limelight.binding.input.touch.TrackpadContext.tuneFlickWindow,
                 com.limelight.binding.input.touch.TrackpadContext.tunePinchSpeed,
                 com.limelight.binding.input.touch.TrackpadContext.tunePinchDominance,
-                com.limelight.binding.input.touch.TrackpadContext.tunePinchMinDelta
+                com.limelight.binding.input.touch.TrackpadContext.tunePinchMinDelta,
+                com.limelight.binding.input.touch.TrackpadContext.tuneScrollSwapAxes,
+                com.limelight.binding.input.touch.TrackpadContext.tuneScrollInvertV,
+                com.limelight.binding.input.touch.TrackpadContext.tuneScrollInvertH
         };
 
         int themeResId = game.getApplicationInfo().theme;
@@ -140,7 +145,7 @@ public class GameMenu implements Game.GameMenuCallbacks {
         for (int i = 0; i < labels.length; i++) {
             final int idx = i;
             final android.widget.TextView tv = new android.widget.TextView(ctx);
-            tv.setText(labels[idx] + ":  " + (idx == 7 ? String.valueOf(vals[idx]) : String.valueOf(vals[idx] / 100f)));
+            tv.setText(labels[idx] + ":  " + (idx == 7 || idx >= 11 ? String.valueOf(vals[idx]) : String.valueOf(vals[idx] / 100f)));
             root.addView(tv);
 
             android.widget.SeekBar sb = new android.widget.SeekBar(ctx);
@@ -150,13 +155,15 @@ public class GameMenu implements Game.GameMenuCallbacks {
                 @Override
                 public void onProgressChanged(android.widget.SeekBar seekBar, int progress, boolean fromUser) {
                     vals[idx] = mins[idx] + progress;
-                    tv.setText(labels[idx] + ":  " + (idx == 7 ? String.valueOf(vals[idx]) : String.valueOf(vals[idx] / 100f)));
+                    tv.setText(labels[idx] + ":  " + (idx == 7 || idx >= 11 ? String.valueOf(vals[idx]) : String.valueOf(vals[idx] / 100f)));
                     // Apply immediately — no reconnect needed
                     com.limelight.binding.input.touch.TrackpadContext.setTuning(
                             vals[0], vals[1], vals[2], vals[3], vals[4], vals[5],
                             vals[6], vals[7]);
                     com.limelight.binding.input.touch.TrackpadContext.setPinchTuning(
                             vals[8], vals[9], vals[10]);
+                    com.limelight.binding.input.touch.TrackpadContext.setScrollAxisTuning(
+                            vals[11], vals[12], vals[13]);
                 }
 
                 @Override
@@ -189,6 +196,9 @@ public class GameMenu implements Game.GameMenuCallbacks {
                     .putInt("seekbar_pinch_speed", vals[8])
                     .putInt("seekbar_pinch_dominance", vals[9])
                     .putInt("seekbar_pinch_min_delta", vals[10])
+                    .putInt("seekbar_scroll_swap_axes", vals[11])
+                    .putInt("seekbar_scroll_invert_v", vals[12])
+                    .putInt("seekbar_scroll_invert_h", vals[13])
                     .apply();
             hideMenu();
         });

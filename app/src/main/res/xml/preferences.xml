@@ -538,6 +538,36 @@
             app:iconSpaceReserved="false"
             seekbar:min="10"
             seekbar:step="10" />
+        <com.limelight.preferences.SeekBarPreference
+            android:defaultValue="1"
+            android:key="seekbar_scroll_swap_axes"
+            android:max="1"
+            android:summary="@string/summary_scroll_swap_axes"
+            android:text=""
+            android:title="@string/title_scroll_swap_axes"
+            app:iconSpaceReserved="false"
+            seekbar:min="0"
+            seekbar:step="1" />
+        <com.limelight.preferences.SeekBarPreference
+            android:defaultValue="1"
+            android:key="seekbar_scroll_invert_v"
+            android:max="1"
+            android:summary="@string/summary_scroll_invert_v"
+            android:text=""
+            android:title="@string/title_scroll_invert_v"
+            app:iconSpaceReserved="false"
+            seekbar:min="0"
+            seekbar:step="1" />
+        <com.limelight.preferences.SeekBarPreference
+            android:defaultValue="0"
+            android:key="seekbar_scroll_invert_h"
+            android:max="1"
+            android:summary="@string/summary_scroll_invert_h"
+            android:text=""
+            android:title="@string/title_scroll_invert_h"
+            app:iconSpaceReserved="false"
+            seekbar:min="0"
+            seekbar:step="1" />
         <CheckBoxPreference
             android:defaultValue="false"
             android:key="checkbox_trackpad_drag_drop_vibration"

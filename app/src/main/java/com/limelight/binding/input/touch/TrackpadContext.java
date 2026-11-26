@@ -166,6 +166,84 @@ public class TrackpadContext implements TouchContext {
         ENABLE_PINCH_ZOOM = speed > 0;
     }
 
+    // === Scroll axis correction ===
+    // One UI 9 also rotates the scroll axes on the Samsung cover keyboard: horizontal
+    // finger movement arrives on the vertical wheel axis. These are exposed as 0/1
+    // sliders so the right combination can be found live rather than by rebuilding.
+    public static volatile int tuneScrollSwapAxes = 1;
+    public static volatile int tuneScrollInvertV = 1;
+    public static volatile int tuneScrollInvertH = 0;
+
+    public static void setScrollAxisTuning(int swapAxes, int invertV, int invertH) {
+        tuneScrollSwapAxes = swapAxes;
+        tuneScrollInvertV = invertV;
+        tuneScrollInvertH = invertH;
+    }
+
+    // === Touchpad pinch gestures ===
+    // Android 13+ reports touchpad pinches as CLASSIFICATION_PINCH carrying a scale
+    // factor, which survives even when the pad reports as a relative mouse and no
+    // per-finger positions are available. Sent to the host as Ctrl + wheel.
+    private static final android.os.Handler gestureHandler =
+            new android.os.Handler(android.os.Looper.getMainLooper());
+    private static double gesturePinchAccum = 0;
+    private static boolean gesturePinchCtrlDown = false;
+    private static NvConnection gesturePinchConn = null;
+    private static boolean gesturePinchSeen = false;
+
+    private static final Runnable gesturePinchEnd = new Runnable() {
+        @Override
+        public void run() {
+            if (gesturePinchCtrlDown && gesturePinchConn != null) {
+                gesturePinchConn.sendKeyboardInput((short) 0xA2, KeyboardPacket.KEY_UP,
+                        (byte) 0, (byte) 0);
+            }
+            gesturePinchCtrlDown = false;
+            gesturePinchAccum = 0;
+        }
+    };
+
+    /**
+     * Handles a pinch gesture reported by the system.
+     * Returns true the first time a pinch is seen, so the caller can confirm once
+     * that these gestures are actually being delivered on this device.
+     */
+    public static boolean handleGesturePinch(NvConnection conn, float scaleFactor) {
+        if (tunePinchSpeed <= 0 || scaleFactor <= 0) {
+            return false;
+        }
+
+        gesturePinchConn = conn;
+        if (!gesturePinchCtrlDown) {
+            gesturePinchCtrlDown = true;
+            gesturePinchAccum = 0;
+            conn.sendKeyboardInput((short) 0xA2, KeyboardPacket.KEY_DOWN, (byte) 0, (byte) 0);
+        }
+
+        // scaleFactor > 1 means the fingers spread, which should zoom in. Ctrl+wheel
+        // rides the same channel as vertical scroll, so it follows that inversion.
+        double delta = (scaleFactor - 1.0) * tunePinchSpeed;
+        if (tuneScrollInvertV != 0) {
+            delta = -delta;
+        }
+        gesturePinchAccum += delta;
+
+        short ticks = (short) gesturePinchAccum;
+        if (ticks != 0) {
+            gesturePinchAccum -= ticks;
+            conn.sendMouseHighResScroll(ticks);
+        }
+
+        // The system does not mark the end of the gesture, so release Ctrl shortly
+        // after the pinch events stop arriving.
+        gestureHandler.removeCallbacks(gesturePinchEnd);
+        gestureHandler.postDelayed(gesturePinchEnd, 120);
+
+        boolean firstEver = !gesturePinchSeen;
+        gesturePinchSeen = true;
+        return firstEver;
+    }
+
     // === Relative-mouse path ===
     // One UI 9 reclassified the Samsung book-cover-keyboard trackpad from
     // SOURCE_TOUCHPAD to SOURCE_MOUSE_RELATIVE, so its events are consumed in
@@ -261,6 +339,8 @@ public class TrackpadContext implements TouchContext {
                 prefConfig.scrollGlideFriction, prefConfig.scrollGlideThreshold,
                 prefConfig.flickSmoothing, prefConfig.flickWindow);
         setPinchTuning(prefConfig.pinchSpeed, prefConfig.pinchDominance, prefConfig.pinchMinDelta);
+        setScrollAxisTuning(prefConfig.scrollSwapAxes, prefConfig.scrollInvertV,
+                prefConfig.scrollInvertH);
     }
 
     private final Runnable scrollTransitionRunnable = new Runnable() {

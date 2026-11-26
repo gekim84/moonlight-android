@@ -3013,6 +3013,20 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
                     }
                 }
 
+                // Android 13+ reports touchpad pinch gestures as a classified motion
+                // event carrying a scale factor. This survives One UI 9 presenting the
+                // pad as a relative mouse, where per-finger positions are gone.
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
+                        && event.getClassification() == MotionEvent.CLASSIFICATION_PINCH) {
+                    float pinchScale = event.getAxisValue(
+                            MotionEvent.AXIS_GESTURE_PINCH_SCALE_FACTOR);
+                    if (TrackpadContext.handleGesturePinch(conn, pinchScale)) {
+                        // Confirm once per session that pinch gestures reach the app
+                        Toast.makeText(this, "Pinch gesture detected", Toast.LENGTH_SHORT).show();
+                    }
+                    return true;
+                }
+
                 if (event.getActionMasked() == MotionEvent.ACTION_SCROLL) {
                     // On some devices (e.g. Samsung cover keyboards), trackpad two-finger
                     // scrolls arrive as generic scroll events. A scroll is never a drag:
@@ -3024,9 +3038,25 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
                         isDragging = false;
                         conn.sendMouseButtonUp(MouseButtonPacket.BUTTON_LEFT);
                     }
-                    // Send the vertical scroll packet (inverted for natural scrolling)
-                    conn.sendMouseHighResScroll((short)(-event.getAxisValue(MotionEvent.AXIS_VSCROLL) * 120));
-                    conn.sendMouseHighResHScroll((short)(event.getAxisValue(MotionEvent.AXIS_HSCROLL) * 120));
+                    // One UI 9 rotates the scroll axes on the Samsung cover keyboard, so
+                    // the swap and the two inversions are adjustable at runtime.
+                    float vScroll = event.getAxisValue(MotionEvent.AXIS_VSCROLL);
+                    float hScroll = event.getAxisValue(MotionEvent.AXIS_HSCROLL);
+
+                    if (TrackpadContext.tuneScrollSwapAxes != 0) {
+                        float swapTmp = vScroll;
+                        vScroll = hScroll;
+                        hScroll = swapTmp;
+                    }
+                    if (TrackpadContext.tuneScrollInvertV != 0) {
+                        vScroll = -vScroll;
+                    }
+                    if (TrackpadContext.tuneScrollInvertH != 0) {
+                        hScroll = -hScroll;
+                    }
+
+                    conn.sendMouseHighResScroll((short)(vScroll * 120));
+                    conn.sendMouseHighResHScroll((short)(hScroll * 120));
                 }
 
                 if ((changedButtons & MotionEvent.BUTTON_PRIMARY) != 0) {

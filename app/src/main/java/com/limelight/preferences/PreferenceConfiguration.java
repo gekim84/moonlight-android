@@ -142,6 +142,9 @@ public class PreferenceConfiguration {
     private static final String SEEKBAR_PINCH_SPEED = "seekbar_pinch_speed";
     private static final String SEEKBAR_PINCH_DOMINANCE = "seekbar_pinch_dominance";
     private static final String SEEKBAR_PINCH_MIN_DELTA = "seekbar_pinch_min_delta";
+    private static final String SEEKBAR_SCROLL_SWAP_AXES = "seekbar_scroll_swap_axes";
+    private static final String SEEKBAR_SCROLL_INVERT_V = "seekbar_scroll_invert_v";
+    private static final String SEEKBAR_SCROLL_INVERT_H = "seekbar_scroll_invert_h";
     private static final String SEEKBAR_TRACKPAD_SENSITIVITY_Y = "seekbar_trackpad_sensitivity_y";
     private static final String CHECKBOX_TRACKPAD_DRAG_DROP_VIBRATION = "checkbox_trackpad_drag_drop_vibration";
     private static final String SEEKBAR_TRACKPAD_DRAG_DROP_THRESHOLD = "seekbar_trackpad_drag_drop_threshold";
@@ -223,6 +226,9 @@ public class PreferenceConfiguration {
     private static final int DEFAULT_PINCH_SPEED = 300;
     private static final int DEFAULT_PINCH_DOMINANCE = 120;
     private static final int DEFAULT_PINCH_MIN_DELTA = 80;
+    private static final int DEFAULT_SCROLL_SWAP_AXES = 1;
+    private static final int DEFAULT_SCROLL_INVERT_V = 1;
+    private static final int DEFAULT_SCROLL_INVERT_H = 0;
     private static final int DEFAULT_TRACKPAD_SENSITIVITY_Y = 100;
     private static final boolean DEFAULT_TRACKPAD_DRAG_DROP_VIBRATION = false;
     private static final int DEFAULT_TRACKPAD_DRAG_DROP_THRESHOLD = 250;
@@ -380,6 +386,9 @@ public class PreferenceConfiguration {
     public int pinchSpeed;
     public int pinchDominance;
     public int pinchMinDelta;
+    public int scrollSwapAxes;
+    public int scrollInvertV;
+    public int scrollInvertH;
     public int trackpadSensitivityY;
     public boolean trackpadDragDropVibration;
     public int trackpadDragDropThreshold;
@@ -1041,6 +1050,9 @@ private static int getFramePacingValue(Context context) {
         config.pinchSpeed = prefs.getInt(SEEKBAR_PINCH_SPEED, DEFAULT_PINCH_SPEED);
         config.pinchDominance = prefs.getInt(SEEKBAR_PINCH_DOMINANCE, DEFAULT_PINCH_DOMINANCE);
         config.pinchMinDelta = prefs.getInt(SEEKBAR_PINCH_MIN_DELTA, DEFAULT_PINCH_MIN_DELTA);
+        config.scrollSwapAxes = prefs.getInt(SEEKBAR_SCROLL_SWAP_AXES, DEFAULT_SCROLL_SWAP_AXES);
+        config.scrollInvertV = prefs.getInt(SEEKBAR_SCROLL_INVERT_V, DEFAULT_SCROLL_INVERT_V);
+        config.scrollInvertH = prefs.getInt(SEEKBAR_SCROLL_INVERT_H, DEFAULT_SCROLL_INVERT_H);
         config.trackpadSensitivityY = prefs.getInt(SEEKBAR_TRACKPAD_SENSITIVITY_Y, DEFAULT_TRACKPAD_SENSITIVITY_Y);
         config.trackpadDragDropVibration = prefs.getBoolean(CHECKBOX_TRACKPAD_DRAG_DROP_VIBRATION, DEFAULT_TRACKPAD_DRAG_DROP_VIBRATION);
         config.trackpadDragDropThreshold = prefs.getInt(SEEKBAR_TRACKPAD_DRAG_DROP_THRESHOLD, DEFAULT_TRACKPAD_DRAG_DROP_THRESHOLD);
