@@ -145,6 +145,7 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
 
     private int lastButtonState = 0;
     private boolean debugClassReported = false;
+    private boolean debugRelBranchReported = false;
     private boolean twoFingerPhysClick = false;
 
     // Only 2 touches are supported
@@ -813,6 +814,8 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
 
         InputManager inputManager = (InputManager) getSystemService(Context.INPUT_SERVICE);
         inputManager.registerInputDeviceListener(keyboardTranslator, null);
+
+        Toast.makeText(this, "Diana build 54", Toast.LENGTH_LONG).show();
 
         // Initialize trackpad contexts
         for (int i = 0; i < trackpadContextMap.length; i++) {
@@ -2838,6 +2841,12 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
                 // dealing with a stylus without hover support, our position might be
                 // significantly different than before.
                 if (inputCaptureProvider.eventHasRelativeMouseAxes(event)) {
+                    if (!debugRelBranchReported) { // one-time
+                        debugRelBranchReported = true;
+                        Toast.makeText(this, "REL BRANCH reached, src=" + eventSource
+                                + " (SOURCE_MOUSE_RELATIVE=" + InputDevice.SOURCE_MOUSE_RELATIVE + ")",
+                                Toast.LENGTH_LONG).show();
+                    }
 
                     // Send the deltas straight from the motion event
                     float rawDeltaX = inputCaptureProvider.getRelativeAxisX(event);
