@@ -115,8 +115,8 @@ public class GameMenu implements Game.GameMenuCallbacks {
                 "Scroll: swap axes (0/1)", "Scroll: invert vertical (0/1)",
                 "Scroll: invert horizontal (0/1)"
         };
-        final int[] mins = { 10, 50, 1, 50, 80, 5, 10, 20, 0, 50, 10, 0, 0, 0 };
-        final int[] maxs = { 200, 400, 50, 500, 99, 200, 100, 300, 1000, 300, 300, 1, 1, 1 };
+        final int[] mins = { 1, 50, 1, 50, 80, 5, 10, 20, 0, 50, 10, 0, 0, 0 };
+        final int[] maxs = { 200, 400, 200, 2000, 99, 200, 100, 300, 1000, 300, 300, 1, 1, 1 };
         final int[] vals = {
                 com.limelight.binding.input.touch.TrackpadContext.tuneMinGain,
                 com.limelight.binding.input.touch.TrackpadContext.tuneMaxGain,

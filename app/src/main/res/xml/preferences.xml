@@ -436,7 +436,7 @@
             android:text="%"
             android:title="@string/title_accel_min_gain"
             app:iconSpaceReserved="false"
-            seekbar:min="10"
+            seekbar:min="1"
             seekbar:step="5" />
         <com.limelight.preferences.SeekBarPreference
             android:defaultValue="160"
@@ -451,7 +451,7 @@
         <com.limelight.preferences.SeekBarPreference
             android:defaultValue="4"
             android:key="seekbar_accel_slow_speed"
-            android:max="50"
+            android:max="200"
             android:summary="@string/summary_accel_slow_speed"
             android:text=""
             android:title="@string/title_accel_slow_speed"
@@ -461,7 +461,7 @@
         <com.limelight.preferences.SeekBarPreference
             android:defaultValue="260"
             android:key="seekbar_accel_fast_speed"
-            android:max="500"
+            android:max="2000"
             android:summary="@string/summary_accel_fast_speed"
             android:text=""
             android:title="@string/title_accel_fast_speed"
