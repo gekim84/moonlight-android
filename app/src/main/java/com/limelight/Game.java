@@ -3054,8 +3054,8 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
                         hScroll = -hScroll;
                     }
 
-                    conn.sendMouseHighResScroll((short)(vScroll * 120));
-                    conn.sendMouseHighResHScroll((short)(hScroll * 120));
+                    // Sends the scroll and arms the kinetic glide that follows it
+                    TrackpadContext.handleWheelScroll(conn, vScroll, hScroll, event.getEventTime());
                 }
 
                 if ((changedButtons & MotionEvent.BUTTON_PRIMARY) != 0) {

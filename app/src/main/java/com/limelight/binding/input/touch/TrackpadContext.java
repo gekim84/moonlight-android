@@ -180,6 +180,94 @@ public class TrackpadContext implements TouchContext {
         tuneScrollInvertH = invertH;
     }
 
+    // === Kinetic glide for wheel-style scrolling ===
+    // One UI 9 delivers two-finger scrolling as discrete wheel events, so the
+    // finger-lift that used to start a glide is no longer visible. Reconstruct it:
+    // track wheel velocity, and when the events stop arriving, keep scrolling with
+    // decaying speed. Reuses the existing glide length and sensitivity sliders.
+    private static final int WHEEL_GLIDE_START_DELAY_MS = 70;
+    private static final int WHEEL_GLIDE_FRAME_MS = 10;
+
+    private static NvConnection wheelConn = null;
+    private static double wheelVelV = 0;
+    private static double wheelVelH = 0;
+    private static long wheelLastTime = 0;
+    private static double wheelGlideV = 0;
+    private static double wheelGlideH = 0;
+
+    private static final Runnable wheelGlideStep = new Runnable() {
+        @Override
+        public void run() {
+            if (wheelConn == null) {
+                return;
+            }
+
+            short v = (short) (wheelGlideV * 120);
+            short h = (short) (wheelGlideH * 120);
+            if (v != 0) {
+                wheelConn.sendMouseHighResScroll(v);
+            }
+            if (h != 0) {
+                wheelConn.sendMouseHighResHScroll(h);
+            }
+
+            wheelGlideV *= SCROLL_FLICK_FRICTION;
+            wheelGlideH *= SCROLL_FLICK_FRICTION;
+
+            if (Math.abs(wheelGlideV * 120) >= 1 || Math.abs(wheelGlideH * 120) >= 1) {
+                gestureHandler.postDelayed(this, WHEEL_GLIDE_FRAME_MS);
+            }
+        }
+    };
+
+    private static final Runnable wheelGlideStart = new Runnable() {
+        @Override
+        public void run() {
+            // Per-frame speed at the moment the scroll stopped
+            double perFrameV = wheelVelV * WHEEL_GLIDE_FRAME_MS;
+            double perFrameH = wheelVelH * WHEEL_GLIDE_FRAME_MS;
+            double speed = Math.sqrt(perFrameV * perFrameV + perFrameH * perFrameH);
+
+            if (speed > SCROLL_FLICK_THRESHOLD) {
+                wheelGlideV = perFrameV;
+                wheelGlideH = perFrameH;
+                gestureHandler.post(wheelGlideStep);
+            }
+        }
+    };
+
+    /** Sends a wheel scroll and arms the kinetic glide that follows it. */
+    public static void handleWheelScroll(NvConnection conn, float v, float h, long eventTime) {
+        wheelConn = conn;
+
+        // A new scroll event cancels any glide in progress
+        gestureHandler.removeCallbacks(wheelGlideStart);
+        gestureHandler.removeCallbacks(wheelGlideStep);
+        wheelGlideV = 0;
+        wheelGlideH = 0;
+
+        long dt = (wheelLastTime == 0) ? 16 : Math.max(1, eventTime - wheelLastTime);
+        if (dt > 200) {
+            // Idle long enough that this is a new gesture, not a continuation
+            wheelVelV = 0;
+            wheelVelH = 0;
+        }
+        wheelLastTime = eventTime;
+
+        wheelVelV = wheelVelV * 0.5 + (v / dt) * 0.5;
+        wheelVelH = wheelVelH * 0.5 + (h / dt) * 0.5;
+
+        if (v != 0) {
+            conn.sendMouseHighResScroll((short) (v * 120));
+        }
+        if (h != 0) {
+            conn.sendMouseHighResHScroll((short) (h * 120));
+        }
+
+        // If no further scroll arrives shortly, treat the gesture as finished
+        gestureHandler.postDelayed(wheelGlideStart, WHEEL_GLIDE_START_DELAY_MS);
+    }
+
     // === Touchpad pinch gestures ===
     // Android 13+ reports touchpad pinches as CLASSIFICATION_PINCH carrying a scale
     // factor, which survives even when the pad reports as a relative mouse and no
