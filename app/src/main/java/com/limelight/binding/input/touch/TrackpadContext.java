@@ -166,6 +166,61 @@ public class TrackpadContext implements TouchContext {
         ENABLE_PINCH_ZOOM = speed > 0;
     }
 
+    // === Relative-mouse path ===
+    // One UI 9 reclassified the Samsung book-cover-keyboard trackpad from
+    // SOURCE_TOUCHPAD to SOURCE_MOUSE_RELATIVE, so its events are consumed in
+    // Game.java before any TrackpadContext sees them. That silently disabled the
+    // axis remap and the acceleration curve. These events carry pointer deltas
+    // only (no per-finger positions), so gesture features cannot be rebuilt here,
+    // but the remap and the curve can be — and they share the same tuning values,
+    // so the Settings sliders and the in-stream dialog keep working.
+    private static double relSmoothedSpeed = 0;
+    private static long relLastEventTime = 0;
+    private static double relPendingX = 0;
+    private static double relPendingY = 0;
+
+    /**
+     * Applies the trackpad axis remap and acceleration curve to a raw relative-mouse
+     * delta. Returns both components packed into a long: X in the high 32 bits,
+     * Y in the low 32 bits.
+     */
+    public static long applyRelativeTuning(float rawX, float rawY, long eventTime,
+                                           boolean swapAxis, float sensX, float sensY) {
+        double dx = swapAxis ? rawY : rawX;
+        double dy = swapAxis ? rawX : rawY;
+
+        // Reset speed tracking when the pointer has been idle, so a new stroke
+        // starts at precision gain instead of inheriting the last one's velocity.
+        long dt = (relLastEventTime == 0) ? 8 : Math.max(1, eventTime - relLastEventTime);
+        if (dt > 200) {
+            relSmoothedSpeed = 0;
+            relPendingX = 0;
+            relPendingY = 0;
+        }
+        relLastEventTime = eventTime;
+
+        double instSpeed = Math.sqrt(dx * dx + dy * dy) / dt;
+        // Rise slowly (no gain flutter) but fall fast (no lingering high gain after
+        // a flick, which would otherwise cause cursor drift on lift-off)
+        double alpha = (instSpeed < relSmoothedSpeed) ? 0.65 : 0.3;
+        relSmoothedSpeed = relSmoothedSpeed * (1 - alpha) + instSpeed * alpha;
+
+        double t = (relSmoothedSpeed - ACCEL_SLOW_SPEED) / (ACCEL_FAST_SPEED - ACCEL_SLOW_SPEED);
+        if (t < 0) t = 0; else if (t > 1) t = 1;
+        t = t * t * (3 - 2 * t);
+        double gain = ACCEL_MIN_GAIN + (ACCEL_MAX_GAIN - ACCEL_MIN_GAIN) * t;
+
+        // Accumulate fractional movement so slow precise motion is never lost
+        relPendingX += dx * sensX * gain;
+        relPendingY += dy * sensY * gain;
+        short sendX = (short) relPendingX;
+        short sendY = (short) relPendingY;
+        relPendingX -= sendX;
+        relPendingY -= sendY;
+
+        return ((long) sendX << 32) | (sendY & 0xffffffffL);
+    }
+
     private static final int[] fingerX = new int[2];
     private static final int[] fingerY = new int[2];
     private static double lastPinchDist = -1;

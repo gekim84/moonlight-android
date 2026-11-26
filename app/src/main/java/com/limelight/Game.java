@@ -2839,8 +2839,31 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
                 if (inputCaptureProvider.eventHasRelativeMouseAxes(event)) {
 
                     // Send the deltas straight from the motion event
-                    short deltaX = (short)inputCaptureProvider.getRelativeAxisX(event);
-                    short deltaY = (short)inputCaptureProvider.getRelativeAxisY(event);
+                    float rawDeltaX = inputCaptureProvider.getRelativeAxisX(event);
+                    float rawDeltaY = inputCaptureProvider.getRelativeAxisY(event);
+
+                    short deltaX;
+                    short deltaY;
+
+                    // One UI 9 reports the Samsung book-cover-keyboard trackpad as
+                    // SOURCE_MOUSE_RELATIVE rather than SOURCE_TOUCHPAD, so these events
+                    // never reach a TrackpadContext and the trackpad axis remap and
+                    // acceleration curve were silently bypassed. Apply them here instead.
+                    // Note: a real mouse captured on this path gets the same treatment,
+                    // so set the trackpad sensitivities back to 100/100 if one is in use.
+                    if (eventSource == InputDevice.SOURCE_MOUSE_RELATIVE) {
+                        long tuned = TrackpadContext.applyRelativeTuning(
+                                rawDeltaX, rawDeltaY, event.getEventTime(),
+                                prefConfig.trackpadSwapAxis,
+                                prefConfig.trackpadSensitivityX * 0.01f,
+                                prefConfig.trackpadSensitivityY * 0.01f);
+                        deltaX = (short)(tuned >> 32);
+                        deltaY = (short)tuned;
+                    }
+                    else {
+                        deltaX = (short)rawDeltaX;
+                        deltaY = (short)rawDeltaY;
+                    }
 
                     if (deltaX != 0 || deltaY != 0) {
                         if (prefConfig.absoluteMouseMode) {
