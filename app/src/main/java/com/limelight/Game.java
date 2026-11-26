@@ -144,8 +144,6 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
     public static Game instance;
 
     private int lastButtonState = 0;
-    private boolean debugClassReported = false;
-    private boolean debugRelBranchReported = false;
     private boolean twoFingerPhysClick = false;
 
     // Only 2 touches are supported
@@ -814,8 +812,6 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
 
         InputManager inputManager = (InputManager) getSystemService(Context.INPUT_SERVICE);
         inputManager.registerInputDeviceListener(keyboardTranslator, null);
-
-        Toast.makeText(this, "Diana build 56", Toast.LENGTH_LONG).show();
 
         // Initialize trackpad contexts
         for (int i = 0; i < trackpadContextMap.length; i++) {
@@ -2841,13 +2837,6 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
                 // dealing with a stylus without hover support, our position might be
                 // significantly different than before.
                 if (inputCaptureProvider.eventHasRelativeMouseAxes(event)) {
-                    if (!debugRelBranchReported) { // one-time
-                        debugRelBranchReported = true;
-                        Toast.makeText(this, "REL BRANCH reached, src=" + eventSource
-                                + " (SOURCE_MOUSE_RELATIVE=" + InputDevice.SOURCE_MOUSE_RELATIVE + ")",
-                                Toast.LENGTH_LONG).show();
-                    }
-
                     // Send the deltas straight from the motion event
                     float rawDeltaX = inputCaptureProvider.getRelativeAxisX(event);
                     float rawDeltaY = inputCaptureProvider.getRelativeAxisY(event);
@@ -3020,17 +3009,6 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
                         }
                     } else {
                         updateMousePosition(view, event);
-                    }
-                }
-
-                // One-time probe: report whether this device classifies touchpad
-                // gestures at all, and with what value. CLASSIFICATION_PINCH is 4.
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && !debugClassReported) {
-                    int cls = event.getClassification();
-                    if (cls != MotionEvent.CLASSIFICATION_NONE) {
-                        debugClassReported = true;
-                        Toast.makeText(this, "Gesture classification seen: " + cls,
-                                Toast.LENGTH_LONG).show();
                     }
                 }
 

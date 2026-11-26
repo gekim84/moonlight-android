@@ -48,7 +48,6 @@ public class TrackpadContext implements TouchContext {
         tuneFlickSmoothing = flickSmoothing;
         tuneFlickWindow = flickWindow;
 
-        relTuningReported = false;
         ACCEL_MIN_GAIN = minGain / 100f;
         ACCEL_MAX_GAIN = maxGain / 100f;
         ACCEL_SLOW_SPEED = slowSpeed / 100f;
@@ -257,7 +256,6 @@ public class TrackpadContext implements TouchContext {
     private static long relLastEventTime = 0;
     private static double relPendingX = 0;
     private static double relPendingY = 0;
-    private static boolean relTuningReported = false;
 
     /**
      * Applies the trackpad axis remap and acceleration curve to a raw relative-mouse
@@ -266,14 +264,6 @@ public class TrackpadContext implements TouchContext {
      */
     public static long applyRelativeTuning(float rawX, float rawY, long eventTime,
                                            boolean swapAxis, float sensX, float sensY) {
-        if (!relTuningReported && com.limelight.Game.instance != null) {
-            relTuningReported = true;
-            android.widget.Toast.makeText(com.limelight.Game.instance,
-                    "Tuning ACTIVE: gain " + ACCEL_MIN_GAIN + "-" + ACCEL_MAX_GAIN
-                            + " | swap=" + swapAxis + " sensX=" + sensX + " sensY=" + sensY
-                            + " | raw delta " + rawX + "," + rawY,
-                    android.widget.Toast.LENGTH_LONG).show();
-        }
 
         double dx = swapAxis ? rawY : rawX;
         double dy = swapAxis ? rawX : rawY;
