@@ -144,6 +144,7 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
     public static Game instance;
 
     private int lastButtonState = 0;
+    private boolean debugClassReported = false;
     private boolean twoFingerPhysClick = false;
 
     // Only 2 touches are supported
@@ -3010,6 +3011,17 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
                         }
                     } else {
                         updateMousePosition(view, event);
+                    }
+                }
+
+                // One-time probe: report whether this device classifies touchpad
+                // gestures at all, and with what value. CLASSIFICATION_PINCH is 4.
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && !debugClassReported) {
+                    int cls = event.getClassification();
+                    if (cls != MotionEvent.CLASSIFICATION_NONE) {
+                        debugClassReported = true;
+                        Toast.makeText(this, "Gesture classification seen: " + cls,
+                                Toast.LENGTH_LONG).show();
                     }
                 }
 
