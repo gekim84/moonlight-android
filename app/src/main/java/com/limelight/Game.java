@@ -815,7 +815,7 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
         InputManager inputManager = (InputManager) getSystemService(Context.INPUT_SERVICE);
         inputManager.registerInputDeviceListener(keyboardTranslator, null);
 
-        Toast.makeText(this, "Diana build 54", Toast.LENGTH_LONG).show();
+        Toast.makeText(this, "Diana build 55", Toast.LENGTH_LONG).show();
 
         // Initialize trackpad contexts
         for (int i = 0; i < trackpadContextMap.length; i++) {

@@ -48,6 +48,7 @@ public class TrackpadContext implements TouchContext {
         tuneFlickSmoothing = flickSmoothing;
         tuneFlickWindow = flickWindow;
 
+        relTuningReported = false;
         ACCEL_MIN_GAIN = minGain / 100f;
         ACCEL_MAX_GAIN = maxGain / 100f;
         ACCEL_SLOW_SPEED = slowSpeed / 100f;
@@ -269,7 +270,8 @@ public class TrackpadContext implements TouchContext {
             relTuningReported = true;
             android.widget.Toast.makeText(com.limelight.Game.instance,
                     "Tuning ACTIVE: gain " + ACCEL_MIN_GAIN + "-" + ACCEL_MAX_GAIN
-                            + " | swap=" + swapAxis + " sensX=" + sensX + " sensY=" + sensY,
+                            + " | swap=" + swapAxis + " sensX=" + sensX + " sensY=" + sensY
+                            + " | raw delta " + rawX + "," + rawY,
                     android.widget.Toast.LENGTH_LONG).show();
         }
 
