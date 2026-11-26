@@ -144,6 +144,8 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
     public static Game instance;
 
     private int lastButtonState = 0;
+    private long debugLastRelToast = 0;   // TEMP DEBUG
+    private long debugLastRouteToast = 0; // TEMP DEBUG
     private boolean twoFingerPhysClick = false;
 
     // Only 2 touches are supported
@@ -2837,6 +2839,14 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
                 // dealing with a stylus without hover support, our position might be
                 // significantly different than before.
                 if (inputCaptureProvider.eventHasRelativeMouseAxes(event)) {
+                    { // TEMP DEBUG
+                        long now = android.os.SystemClock.uptimeMillis();
+                        if (now - debugLastRelToast > 2000) {
+                            debugLastRelToast = now;
+                            Toast.makeText(this, "DBG RAW-RELATIVE  src=" + eventSource
+                                    + "  tool=" + event.getToolType(0), Toast.LENGTH_LONG).show();
+                        }
+                    }
 
                     // Send the deltas straight from the motion event
                     short deltaX = (short)inputCaptureProvider.getRelativeAxisX(event);
@@ -3106,6 +3116,14 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
             // This case is for fingers
             else {
                 if (eventSource == InputDevice.SOURCE_TOUCHPAD) {
+                    { // TEMP DEBUG
+                        long now = android.os.SystemClock.uptimeMillis();
+                        if (now - debugLastRouteToast > 2000) {
+                            debugLastRouteToast = now;
+                            Toast.makeText(this, "DBG TRACKPAD-ROUTE  src=" + eventSource,
+                                    Toast.LENGTH_LONG).show();
+                        }
+                    }
                     return handleTouchInput(event, trackpadContextMap, false);
                 } else {
                     if (virtualController != null &&

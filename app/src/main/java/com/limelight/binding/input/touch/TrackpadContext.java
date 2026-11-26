@@ -166,6 +166,8 @@ public class TrackpadContext implements TouchContext {
         ENABLE_PINCH_ZOOM = speed > 0;
     }
 
+    private static long debugLastTpcToast = 0; // TEMP DEBUG
+
     private static final int[] fingerX = new int[2];
     private static final int[] fingerY = new int[2];
     private static double lastPinchDist = -1;
@@ -457,6 +459,16 @@ public class TrackpadContext implements TouchContext {
 
     @Override
     public boolean touchMoveEvent(int eventX, int eventY, long eventTime) {
+        { // TEMP DEBUG
+            long now = android.os.SystemClock.uptimeMillis();
+            if (now - debugLastTpcToast > 2000 && com.limelight.Game.instance != null) {
+                debugLastTpcToast = now;
+                android.widget.Toast.makeText(com.limelight.Game.instance,
+                        "DBG TPC MOVE  idx=" + actionIndex + "  fingers=" + pointerCount
+                                + "  swap=" + swapAxis + "  sensY=" + sensitivityY,
+                        android.widget.Toast.LENGTH_LONG).show();
+            }
+        }
         if (cancelled) {
             return true;
         }
